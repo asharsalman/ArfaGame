@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <title>GAMES</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <!-- MENU -->
+  <div id="menu">
+    <div class="wallet">
+      <span id="coinBal" class="coinbal">🪙 0</span>
+      <button id="shopBtn" class="shopbtn">🛍 Shop</button>
+    </div>
+    <header class="hero">
+      <h1 class="logo">GAMES</h1>
+      <p class="tagline">Mini-game arcade &mdash; grab a friend &amp; pick one</p>
+      <nav id="tabs" class="tabs"></nav>
+    </header>
+    <main id="grid" class="grid"></main>
+    <footer class="foot">
+      <span class="pchip" style="--p:#4df0ff">P1 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd><kbd>Space</kbd></span>
+      <span class="pchip" style="--p:#ff5b8a">P2 <kbd>&uarr;</kbd><kbd>&larr;</kbd><kbd>&darr;</kbd><kbd>&rarr;</kbd><kbd>&crarr;</kbd></span>
+      <span class="pchip" style="--p:#4dff9e">P3 <kbd>T</kbd><kbd>F</kbd><kbd>G</kbd><kbd>H</kbd><kbd>B</kbd></span>
+      <span class="pchip" style="--p:#ffd24d">P4 <kbd>I</kbd><kbd>J</kbd><kbd>K</kbd><kbd>L</kbd><kbd>O</kbd></span>
+      <span class="pchip" style="--p:#fff">&nbsp;<kbd>R</kbd> restart &nbsp;<kbd>Esc</kbd> menu</span>
+    </footer>
+  </div>
+
+  <!-- player count chooser -->
+  <div id="chooser" class="modal" hidden>
+    <div class="modal-card">
+      <h2 id="chooserTitle">How many players?</h2>
+      <p id="chooserHint" class="hint"></p>
+      <div id="chooserBtns" class="pcount"></div>
+      <button id="chooserCancel" class="back">Cancel</button>
+    </div>
+  </div>
+
+  <!-- SHOP -->
+  <div id="shop" hidden>
+    <header class="hero">
+      <h1 class="logo shoptitle">SHOP</h1>
+      <p class="tagline">Spend coins on skins for your games &mdash; <span id="shopCoins" class="coinbal">🪙 0</span></p>
+      <button id="shopClose" class="back">&larr; Back to games</button>
+    </header>
+    <main id="shopGrid" class="grid shopgrid"></main>
+  </div>
+
+  <!-- GAME -->
+  <div id="stage">
+    <div class="topbar">
+      <button id="backBtn" class="back">&larr; Menu</button>
+      <span id="gameTitle" class="gtitle"></span>
+      <span class="spacer"></span>
+    </div>
+    <div class="canvas-wrap">
+      <canvas id="game" width="960" height="600"></canvas>
+    </div>
+  </div>
+
+  <!-- engine + hub first, then games register themselves -->
+  <script src="js/engine.js"></script>
+  <script src="js/shop.js"></script>
+  <script src="js/hub.js"></script>
+  <script src="js/games/geometrydash.js"></script>
+  <script src="js/games/pong.js"></script>
+  <script src="js/games/airhockey.js"></script>
+  <script src="js/games/sumo.js"></script>
+  <script src="js/games/tank.js"></script>
+  <script src="js/games/tron.js"></script>
+  <script src="js/games/sword.js"></script>
+  <script src="js/games/soccer.js"></script>
+  <script src="js/games/tictactoe.js"></script>
+  <script src="js/games/sprint.js"></script>
+  <script src="js/games/chicken.js"></script>
+  <script src="js/games/gunduel.js"></script>
+</body>
+</html>

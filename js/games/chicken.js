@@ -1,0 +1,140 @@
+/* Chicken Round-Up — 2-4 players. Catch loose chickens and herd them into your
+   pen. Most chickens penned when the timer runs out wins. */
+(function () {
+  const { clamp, rand, dist, text, rectsOverlap } = Eng;
+
+  GameHub.register({
+    id: "chicken",
+    name: "Chicken Round-Up",
+    category: "Party",
+    players: "2-4P",
+    min: 2, max: 4,
+    color: "#ffcf33",
+    icon: "🐔",
+    desc: "Catch the loose chickens and drop them in your pen. Most chickens in 40s wins!",
+    controls: "Move with your keys · touch a chicken to grab · walk it home",
+    create(env) {
+      const { W, H, input } = env;
+      const N = env.players, M = 20, PR = 20, CR = 12, GAME_TIME = 40;
+      const comb = Eng.skinColor("chicken", "#ff4d4d");
+      const AX0 = M + 10, AX1 = W - M - 10, AY0 = M + 10, AY1 = H - M - 10;
+      const PENW = 150, PENH = 120;
+      const penPos = [
+        { x: M + 8, y: M + 8 }, { x: W - M - PENW - 8, y: H - M - PENH - 8 },
+        { x: W - M - PENW - 8, y: M + 8 }, { x: M + 8, y: H - M - PENH - 8 },
+      ];
+      let players, chickens, timeLeft, phase, count, matchOver;
+      const results = Eng.Results();
+
+      function reset() {
+        players = Eng.PLAYERS.slice(0, N).map((b, i) => {
+          const pen = { x: penPos[i].x, y: penPos[i].y, w: PENW, h: PENH };
+          return { b, pen, x: pen.x + PENW / 2, y: pen.y + PENH / 2, carried: [], count: 0 };
+        });
+        chickens = [];
+        for (let i = 0; i < 14; i++)
+          chickens.push({ x: rand(W * 0.3, W * 0.7), y: rand(H * 0.3, H * 0.7), dir: rand(0, 7), wt: rand(0.4, 1.4), state: "loose" });
+        timeLeft = GAME_TIME; phase = "count"; count = 3.2; matchOver = false;
+      }
+      reset();
+
+      function endMatch() {
+        const rank = [...players].sort((a, b) => b.count - a.count).map((p) => ({ b: p.b, score: p.count }));
+        results.open(rank); matchOver = true;
+      }
+
+      function update(dt) {
+        if (matchOver) { if (results.update(dt, input)) reset(); return; }
+        if (phase === "count") { count -= dt; if (count <= 0) phase = "play"; return; }
+
+        timeLeft -= dt;
+        if (timeLeft <= 0) { timeLeft = 0; endMatch(); return; }
+
+        // players move
+        for (const p of players) {
+          let vx = 0, vy = 0;
+          if (input.down(p.b.left)) vx -= 1; if (input.down(p.b.right)) vx += 1;
+          if (input.down(p.b.up)) vy -= 1; if (input.down(p.b.down)) vy += 1;
+          const m = Math.hypot(vx, vy) || 1;
+          p.x = clamp(p.x + (vx / m) * 270 * dt, AX0, AX1);
+          p.y = clamp(p.y + (vy / m) * 270 * dt, AY0, AY1);
+          // trailing carried chickens
+          let lx = p.x, ly = p.y;
+          for (const ch of p.carried) {
+            const dx = lx - ch.x, dy = ly - ch.y, d = Math.hypot(dx, dy) || 1, gap = 24;
+            if (d > gap) { const k = Math.min(1, 16 * dt) * (d - gap) / d; ch.x += dx * k; ch.y += dy * k; }
+            lx = ch.x; ly = ch.y;
+          }
+          // deposit when in own pen
+          if (p.carried.length && p.x > p.pen.x && p.x < p.pen.x + p.pen.w && p.y > p.pen.y && p.y < p.pen.y + p.pen.h) {
+            for (const ch of p.carried) { ch.state = "penned"; ch.x = rand(p.pen.x + 16, p.pen.x + p.pen.w - 16); ch.y = rand(p.pen.y + 16, p.pen.y + p.pen.h - 16); p.count++; }
+            p.carried = [];
+          }
+        }
+
+        // loose chickens wander + flee + get caught
+        for (const ch of chickens) {
+          if (ch.state !== "loose") continue;
+          ch.wt -= dt;
+          if (ch.wt <= 0) { ch.dir = rand(0, 7); ch.wt = rand(0.4, 1.3); }
+          let vx = Math.cos(ch.dir) * 70, vy = Math.sin(ch.dir) * 70;
+          let near = null, nd = 86;
+          for (const p of players) { const d = dist(p.x, p.y, ch.x, ch.y); if (d < nd) { nd = d; near = p; } }
+          if (near) { const a = Math.atan2(ch.y - near.y, ch.x - near.x); vx = Math.cos(a) * 165; vy = Math.sin(a) * 165; }
+          ch.x = clamp(ch.x + vx * dt, AX0, AX1); ch.y = clamp(ch.y + vy * dt, AY0, AY1);
+          for (const p of players) {
+            if (dist(p.x, p.y, ch.x, ch.y) < PR + CR) { ch.state = "carried"; p.carried.push(ch); break; }
+          }
+        }
+      }
+
+      function drawChicken(ctx, x, y, s) {
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(x, y, 11 * s, 10 * s, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = comb; ctx.beginPath(); ctx.arc(x, y - 9 * s, 3 * s, 0, 7); ctx.fill();
+        ctx.fillStyle = "#ffb84d"; ctx.beginPath(); ctx.moveTo(x - 10 * s, y); ctx.lineTo(x - 15 * s, y + 2 * s); ctx.lineTo(x - 10 * s, y + 3 * s); ctx.fill();
+        ctx.fillStyle = "#0b0e1a"; ctx.beginPath(); ctx.arc(x - 5 * s, y - 2 * s, 1.6 * s, 0, 7); ctx.fill();
+      }
+
+      function render(ctx) {
+        ctx.fillStyle = "#244a22"; ctx.fillRect(0, 0, W, H);
+        // grass stripes
+        ctx.fillStyle = "#1f4220";
+        for (let y = 0; y < H; y += 40) ctx.fillRect(0, y, W, 20);
+        // fence border
+        ctx.strokeStyle = "#caa15a"; ctx.lineWidth = 6; ctx.strokeRect(M, M, W - 2 * M, H - 2 * M);
+
+        // pens
+        for (const p of players) {
+          ctx.fillStyle = p.b.color + "22"; ctx.fillRect(p.pen.x, p.pen.y, p.pen.w, p.pen.h);
+          ctx.strokeStyle = p.b.color; ctx.lineWidth = 4; ctx.setLineDash([10, 8]);
+          ctx.strokeRect(p.pen.x, p.pen.y, p.pen.w, p.pen.h); ctx.setLineDash([]);
+          text(ctx, `${p.b.name}: ${p.count}`, p.pen.x + p.pen.w / 2, p.pen.y - 12, { font: "800 16px system-ui", color: p.b.color });
+        }
+        // penned chickens
+        for (const ch of chickens) if (ch.state === "penned") drawChicken(ctx, ch.x, ch.y, 0.8);
+        // loose + carried
+        for (const ch of chickens) if (ch.state !== "penned") drawChicken(ctx, ch.x, ch.y, 1);
+
+        // players (farmers)
+        for (const p of players) {
+          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 14;
+          ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
+          ctx.fillStyle = "#10131f"; ctx.fillRect(p.x - 12, p.y - PR - 5, 24, 6); // hat brim
+          ctx.fillRect(p.x - 7, p.y - PR - 12, 14, 8);
+          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x - 6, p.y - 3, 3, 0, 7); ctx.arc(p.x + 6, p.y - 3, 3, 0, 7); ctx.fill();
+        }
+
+        text(ctx, `⏱ ${Math.ceil(timeLeft)}s`, W / 2, 30, { font: "900 26px system-ui", color: "#fff", glow: "#000" });
+
+        if (phase === "count") {
+          ctx.fillStyle = "rgba(4,6,15,0.5)"; ctx.fillRect(0, 0, W, H);
+          const n = Math.ceil(count - 0.2);
+          text(ctx, n > 0 ? n : "GO!", W / 2, H / 2, { font: "900 90px system-ui", color: "#ffcf33", glow: "#ffcf33" });
+          text(ctx, "Herd chickens into your pen!", W / 2, H / 2 + 70, { font: "700 20px system-ui", color: "#fff" });
+        }
+        if (matchOver) results.render(ctx, W, H);
+      }
+      return { update, render };
+    },
+  });
+})();
