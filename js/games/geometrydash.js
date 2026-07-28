@@ -21,9 +21,20 @@
     create(env) {
       const { W, H, input } = env;
       const PX = 170;                 // screen x where the cube sits
-      const LEVEL_END = 22000;        // world length (px) — longer track
       const GRAV = 2500, JUMP = -880;
       const results = Eng.Results();
+
+      // ---- levels: each one is longer, faster and denser than the last ----
+      const LEVELS = [
+        { name: "Stereo Sunrise", len: 14000, base: 320, gain: 180, dens: 1.35, maxSpike: 2, hue: 200, star: "★☆☆" },
+        { name: "Neon Rush",      len: 18000, base: 360, gain: 230, dens: 1.10, maxSpike: 3, hue: 285, star: "★★☆" },
+        { name: "Magma Drop",     len: 22000, base: 400, gain: 280, dens: 0.92, maxSpike: 3, hue: 15,  star: "★★★" },
+        { name: "Void Circuit",   len: 26000, base: 440, gain: 330, dens: 0.80, maxSpike: 4, hue: 130, star: "★★★★" },
+      ];
+      let levelIdx = clamp(store.get("gd_level", 0), 0, LEVELS.length - 1);
+      let unlocked = clamp(store.get("gd_unlocked", 1), 1, LEVELS.length);
+      let L = LEVELS[levelIdx];
+      let LEVEL_END = L.len;
 
       let lifetimeCoins = Eng.coins();
       let bestPct = store.get("gd_best", 0);
@@ -34,7 +45,7 @@
       let level, players, matchWinner;
       let SIZE = 42;
 
-      const speedAt = (x) => 370 + clamp(x / LEVEL_END, 0, 1) * 300;
+      const speedAt = (x) => L.base + clamp(x / LEVEL_END, 0, 1) * L.gain;
 
       // ---- level generation (shared by both racers; fair spacing) ----
       function buildLevel() {
@@ -45,9 +56,10 @@
           const sp = speedAt(x), prog = x / LEVEL_END;
           const r = Math.random();
           let groupW = 0, bigGap = false;
-          if (r < 0.5) {                               // spikes — up to 4 as it ramps
-            const maxN = prog < 0.2 ? 2 : prog < 0.5 ? 3 : 4;
-            const n = randInt(1, maxN);
+          if (r < 0.5) {                               // spikes — denser on later levels
+            const maxN = prog < 0.2 ? Math.min(2, L.maxSpike)
+                       : prog < 0.5 ? Math.min(3, L.maxSpike) : L.maxSpike;
+            const n = randInt(1, Math.max(1, maxN));
             for (let i = 0; i < n; i++) obstacles.push({ type: "spike", wx: x + i * 38, w: 38 });
             groupW = n * 38;
           } else if (r < 0.74) {                       // short block, sometimes a trailing spike
@@ -64,8 +76,8 @@
           if (groupW <= 150 && Math.random() < 0.5)
             coins.push({ wx: x + groupW / 2, hAbove: 150 });
           // gap = sp * factor → constant reaction time; tighter factor = harder
-          let gap = sp * (bigGap ? rand(1.2, 1.45) : rand(0.72, 1.08));
-          gap = Math.max(gap, 300);
+          let gap = sp * L.dens * (bigGap ? rand(1.2, 1.45) : rand(0.72, 1.08));
+          gap = Math.max(gap, 290);
           // boosters: a jump pad mid-gap (launches you high), or a shield pickup
           if (prog > 0.12 && Math.random() < 0.16) pads.push({ wx: x + groupW + gap * 0.5 });
           else if (prog > 0.2 && Math.random() < 0.1) shields.push({ wx: x + groupW + gap * 0.5, hAbove: 60 });
@@ -87,6 +99,8 @@
       function startGame(m) {
         mode = m;
         SIZE = m === 1 ? 42 : 34;
+        L = LEVELS[levelIdx]; LEVEL_END = L.len;
+        store.set("gd_level", levelIdx);
         level = buildLevel();
         matchWinner = 0;
         if (m === 1) {
@@ -197,6 +211,9 @@
           p.wx = LEVEL_END; p.finished = true;
           const pct = 100;
           if (pct > bestPct) { bestPct = pct; store.set("gd_best", bestPct); }
+          if (levelIdx + 1 >= unlocked && unlocked < LEVELS.length) {
+            unlocked = levelIdx + 2; store.set("gd_unlocked", unlocked);   // next level opens
+          }
           if (mode === 2 && !matchWinner) {
             matchWinner = p.id;
             const other = players.find((q) => q !== p);
@@ -216,11 +233,23 @@
       function update(dt) {
         time += dt;
         if (state === "select") {
+          // pick a level with ←/→ (or A/D)
+          if (input.pressed("ArrowLeft") || input.pressed("KeyA")) levelIdx = Math.max(0, levelIdx - 1);
+          if (input.pressed("ArrowRight") || input.pressed("KeyD"))
+            levelIdx = Math.min(unlocked - 1, levelIdx + 1);
           if (input.pressed("Digit1") || input.pressed("Numpad1")) startGame(1);
           if (input.pressed("Digit2") || input.pressed("Numpad2")) startGame(2);
           if (input.pointer.pressed) {
             const { x, y } = input.pointer;
-            if (y > H / 2 + 10 && y < H / 2 + 90) {
+            // level tiles
+            const n = LEVELS.length, tw = 176, gap = 14;
+            const totalW = n * tw + (n - 1) * gap, x0 = W / 2 - totalW / 2;
+            if (y > 268 && y < 368) {
+              const i = Math.floor((x - x0) / (tw + gap));
+              const within = x >= x0 + i * (tw + gap) && x <= x0 + i * (tw + gap) + tw;
+              if (i >= 0 && i < n && within && i < unlocked) levelIdx = i;
+            }
+            if (y > H - 118 && y < H - 38) {
               if (x > W / 2 - 220 && x < W / 2 - 20) startGame(1);
               if (x > W / 2 + 20 && x < W / 2 + 220) startGame(2);
             }
@@ -233,13 +262,7 @@
 
       // ---------------- render ----------------
       function coin(ctx, cx, cy, seed) {
-        const sc = Math.abs(Math.cos(time * 4 + seed)) * 0.8 + 0.2;
-        ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, 1);
-        ctx.fillStyle = "#ffcf33"; ctx.strokeStyle = "#a8780f"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 13, 0, 7); ctx.fill(); ctx.stroke();
-        ctx.strokeStyle = "#fff3b0"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(0, 0, 7, 0, 7); ctx.stroke();
-        ctx.restore();
+        Art.coin(ctx, cx, cy, 14, Math.abs(Math.cos(time * 4 + seed)) * 0.8 + 0.2);
       }
 
       function renderView(ctx, p) {
@@ -341,7 +364,8 @@
         ctx.fillStyle = fg; roundRect(ctx, barX, barY, Math.max(8, barW * (pct / 100)), 14, 7); ctx.fill();
         text(ctx, `${pct}%`, W / 2, barY + 30, { font: "800 16px system-ui", color: "#fff" });
 
-        text(ctx, `🪙 ${p.coins}`, 16, barY + 7, { align: "left", font: "800 20px system-ui", color: "#ffcf33" });
+        Art.coin(ctx, 26, barY + 7, 11, 1);
+        text(ctx, `${p.coins}`, 42, barY + 7, { align: "left", font: "800 19px system-ui", color: "#ffcf33" });
         if (mode === 2)
           text(ctx, `P${p.id}`, W - 16, barY + 7, { align: "right", font: "800 18px system-ui", color: p.color });
 
@@ -355,25 +379,53 @@
       }
 
       function renderSelect(ctx) {
+        const sel = LEVELS[levelIdx];
         const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, "#101a36"); g.addColorStop(1, "#0a0f22");
+        g.addColorStop(0, `hsl(${sel.hue},55%,16%)`); g.addColorStop(1, "#0a0f22");
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        text(ctx, "GEOMETRY DASH", W / 2, 150, { font: "900 64px system-ui", color: "#4df0ff", glow: "#4df0ff" });
-        text(ctx, "Collect coins · dodge spikes · reach 100%", W / 2, 205, { font: "600 20px system-ui", color: "#9fb0e0" });
-        text(ctx, `🪙 ${lifetimeCoins} total coins        ⭐ best ${bestPct}%`, W / 2, 250,
-          { font: "700 20px system-ui", color: "#ffcf33" });
+        ctx.strokeStyle = `hsla(${sel.hue},70%,60%,0.09)`; ctx.lineWidth = 2;
+        for (let x = 0; x < W; x += 60) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+        for (let y = 0; y < H; y += 60) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+
+        text(ctx, "GEOMETRY DASH", W / 2, 74, { font: "900 56px system-ui", color: "#4df0ff", glow: "#4df0ff" });
+        text(ctx, "Collect coins · dodge spikes · reach 100%", W / 2, 118, { font: "600 18px system-ui", color: "#9fb0e0" });
+        Art.coin(ctx, W / 2 - 96, 154, 12, 1);
+        text(ctx, `${lifetimeCoins}`, W / 2 - 76, 154, { align: "left", font: "800 19px system-ui", color: "#ffcf33" });
+        text(ctx, `⭐ best ${bestPct}%`, W / 2 + 60, 154, { font: "800 19px system-ui", color: "#ffcf33" });
+        text(ctx, "CHOOSE A LEVEL   (← →)", W / 2, 232, { font: "800 17px system-ui", color: "#cfe0ff" });
+
+        // level tiles
+        const n = LEVELS.length, tw = 176, gap = 14, th = 100;
+        const totalW = n * tw + (n - 1) * gap, x0 = W / 2 - totalW / 2;
+        LEVELS.forEach((lv, i) => {
+          const bx = x0 + i * (tw + gap), by = 268;
+          const locked = i >= unlocked, on = i === levelIdx;
+          ctx.fillStyle = locked ? "rgba(255,255,255,0.03)" : `hsla(${lv.hue},60%,45%,0.22)`;
+          roundRect(ctx, bx, by, tw, th, 14); ctx.fill();
+          ctx.strokeStyle = locked ? "#39406b" : (on ? "#fff" : `hsl(${lv.hue},70%,58%)`);
+          ctx.lineWidth = on ? 4 : 2; ctx.stroke();
+          if (locked) {
+            text(ctx, "🔒", bx + tw / 2, by + 38, { font: "700 26px system-ui", color: "#6b76a3" });
+            text(ctx, "Locked", bx + tw / 2, by + 70, { font: "700 13px system-ui", color: "#6b76a3" });
+          } else {
+            text(ctx, `LEVEL ${i + 1}`, bx + tw / 2, by + 26, { font: "800 14px system-ui", color: "#cfe0ff" });
+            text(ctx, lv.name, bx + tw / 2, by + 50, { font: "800 17px system-ui", color: `hsl(${lv.hue},85%,70%)` });
+            text(ctx, lv.star, bx + tw / 2, by + 76, { font: "700 15px system-ui", color: "#ffd24d" });
+          }
+        });
 
         const btn = (bx, label, sub, col, num) => {
-          ctx.fillStyle = "rgba(255,255,255,0.04)"; ctx.strokeStyle = col; ctx.lineWidth = 3;
-          roundRect(ctx, bx, H / 2 + 10, 200, 80, 16); ctx.fill(); ctx.stroke();
-          text(ctx, label, bx + 100, H / 2 + 42, { font: "800 26px system-ui", color: col });
-          text(ctx, sub, bx + 100, H / 2 + 70, { font: "600 14px system-ui", color: "#9fb0e0" });
-          text(ctx, num, bx + 100, H / 2 - 10, { font: "700 14px system-ui", color: "#6b76a3" });
+          const by = H - 118;
+          ctx.fillStyle = "rgba(255,255,255,0.05)"; ctx.strokeStyle = col; ctx.lineWidth = 3;
+          roundRect(ctx, bx, by, 200, 80, 16); ctx.fill(); ctx.stroke();
+          text(ctx, label, bx + 100, by + 32, { font: "800 26px system-ui", color: col });
+          text(ctx, sub, bx + 100, by + 60, { font: "600 14px system-ui", color: "#9fb0e0" });
+          text(ctx, num, bx + 100, by - 16, { font: "700 13px system-ui", color: "#6b76a3" });
         };
         btn(W / 2 - 220, "SOLO", "1 player", "#4df0ff", "press 1");
         btn(W / 2 + 20, "RACE", "2 players", "#ff5b8a", "press 2");
-        text(ctx, "P1 jump: W / Space    ·    P2 jump: ↑ / Enter", W / 2, H - 60,
-          { font: "600 16px system-ui", color: "#7e8ab5" });
+        text(ctx, "P1 jump: W / Space    ·    P2 jump: ↑ / Enter", W / 2, H - 22,
+          { font: "600 15px system-ui", color: "#7e8ab5" });
       }
 
       function render(ctx) {
@@ -395,9 +447,13 @@
         }
         if (mode === 1 && solo.finished) {
           ctx.fillStyle = "rgba(4,6,15,0.78)"; ctx.fillRect(0, 0, W, H);
-          text(ctx, "LEVEL COMPLETE!", W / 2, H / 2 - 40, { font: "900 54px system-ui", color: "#4dff9e", glow: "#4dff9e" });
-          text(ctx, `🪙 ${solo.coins} coins collected this run`, W / 2, H / 2 + 14, { font: "700 22px system-ui", color: "#ffcf33" });
-          text(ctx, "Space / click to play again   ·   Esc for menu", W / 2, H / 2 + 54, { font: "600 16px system-ui", color: "#9fb0e0" });
+          text(ctx, "LEVEL COMPLETE!", W / 2, H / 2 - 50, { font: "900 54px system-ui", color: "#4dff9e", glow: "#4dff9e" });
+          Art.coin(ctx, W / 2 - 70, H / 2 + 6, 13, 1);
+          text(ctx, `${solo.coins} coins collected`, W / 2 - 48, H / 2 + 6, { align: "left", font: "700 21px system-ui", color: "#ffcf33" });
+          if (levelIdx + 1 < LEVELS.length)
+            text(ctx, `🔓 Level ${levelIdx + 2} — ${LEVELS[levelIdx + 1].name} unlocked!`, W / 2, H / 2 + 44,
+              { font: "800 19px system-ui", color: "#fff" });
+          text(ctx, "Space / click to play again   ·   Esc for menu", W / 2, H / 2 + 80, { font: "600 16px system-ui", color: "#9fb0e0" });
         }
         if (matchWinner) results.render(ctx, W, H);
       }

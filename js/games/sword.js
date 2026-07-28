@@ -13,7 +13,7 @@
     controls: "P1: A/D move, W jump, Space stab · P2: ←/→, ↑, Enter",
     create(env) {
       const { W, H, input } = env;
-      const FLOOR = H - 70, GRAV = 1800, REACH = 56, TARGET = 5, LUNGE = 0.22;
+      const FLOOR = H - 70, GRAV = 1800, REACH = 42, TARGET = 5, LUNGE = 0.22;
       const bladeItem = Eng.equippedItem("sword") || {};
       const bladeCol = bladeItem.color || "#e0e6ff";
       const bladeFx = bladeItem.extra || "";
@@ -83,9 +83,11 @@
         // Overhead chop: the blade rises, then comes down through the arc.
         const h = Art.handPos(p.x, p.y, { scale: 1.05, t: time, face: p.face, pose });
         const k = p.lungeT > 0 ? 1 - p.lungeT / LUNGE : -1;   // -1 = resting
-        const ang = k < 0
-          ? p.face * -0.5                                      // held ready, tip up
-          : p.face * (-2.0 + 2.6 * Math.min(1, k * 1.25));     // raise → chop down
+        // angle for a RIGHT-facing fighter, then mirror it for a left-facing one
+        const right = k < 0
+          ? -0.55                                              // held ready, tip up
+          : -2.0 + 2.55 * Math.min(1, k * 1.25);               // raise → chop down
+        const ang = p.face === 1 ? right : Math.PI - right;
         Art.blade(ctx, h.x, h.y, ang, REACH, bladeCol, bladeFx, time);
       }
 

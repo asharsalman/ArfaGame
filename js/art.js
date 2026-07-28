@@ -62,6 +62,8 @@
         shirt: o.shirt || st.shirt,
         hat: o.hat || st.hat,
         hatColor: o.hatColor || st.hatColor,
+        hair: o.hair || st.hair,
+        hairColor: o.hairColor || st.hairColor,
       });
     }
     const s = o.scale || 1, c = o.color || "#fff";
@@ -75,28 +77,51 @@
     if (o.glow) { ctx.shadowColor = c; ctx.shadowBlur = 16; }
 
     const HIP = -22, SHO = -40, HEAD = -52, R = 9;
-    // legs then arms then body then head (head on top)
-    limb(ctx, 0, HIP, p.l1[0], HIP + p.l1[1], 7, c);
-    limb(ctx, 0, HIP, p.l2[0], HIP + p.l2[1], 7, c);
-    limb(ctx, 0, SHO, p.a1[0], SHO + p.a1[1], 6, c);
-    limb(ctx, 0, SHO, p.a2[0], SHO + p.a2[1], 6, c);
-    limb(ctx, 0, SHO - 2, 0, HIP, 9, c);
+    const parts = [
+      [0, HIP, p.l1[0], HIP + p.l1[1], 7],
+      [0, HIP, p.l2[0], HIP + p.l2[1], 7],
+      [0, SHO, p.a1[0], SHO + p.a1[1], 6],
+      [0, SHO, p.a2[0], SHO + p.a2[1], 6],
+      [0, SHO - 2, 0, HIP, 9],
+    ];
+    // Pass 1: every outline. Pass 2: every fill. Drawing it in two passes means
+    // limbs merge into one silhouette with no dark seams where they join.
+    ctx.lineCap = "round";
+    ctx.strokeStyle = OUT;
+    parts.forEach(([x1, y1, x2, y2, w]) => {
+      ctx.lineWidth = w + 5;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    });
+    ctx.fillStyle = OUT;
+    ctx.beginPath(); ctx.arc(0, HEAD, R + 2.5, 0, 7); ctx.fill();
+    ctx.strokeStyle = c;
+    parts.forEach(([x1, y1, x2, y2, w]) => {
+      ctx.lineWidth = w;
+      ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    });
+
     if (o.shirt) {                       // purchased shirt over the torso
       ctx.strokeStyle = o.shirt; ctx.lineWidth = 13; ctx.lineCap = "butt";
       ctx.beginPath(); ctx.moveTo(0, SHO + 1); ctx.lineTo(0, HIP - 3); ctx.stroke();
       ctx.lineCap = "round";
     }
 
-    ctx.strokeStyle = OUT; ctx.lineWidth = 4;
     ctx.fillStyle = c;
-    ctx.beginPath(); ctx.arc(0, HEAD, R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, HEAD, R, 0, 7); ctx.fill();
     ctx.shadowBlur = 0;
-    // eyes
+
+    if (o.hair) A.hair(ctx, HEAD, R, f, o.hair, o.hairColor || "#3a2a1a");
+
+    // face: eyes + mouth
     ctx.fillStyle = OUT;
     ctx.beginPath();
-    ctx.arc(f * 2.6 - 2.4, HEAD - 1.5, 1.9, 0, 7);
-    ctx.arc(f * 2.6 + 2.4, HEAD - 1.5, 1.9, 0, 7);
+    ctx.arc(f * 2.4 - 2.6, HEAD - 1.6, 2, 0, 7);
+    ctx.arc(f * 2.4 + 2.6, HEAD - 1.6, 2, 0, 7);
     ctx.fill();
+    ctx.strokeStyle = OUT; ctx.lineWidth = 1.6; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.arc(f * 1.6, HEAD + 2.2, 3.2, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
 
     if (o.hat === "cap") {
       ctx.fillStyle = o.hatColor || "#e8503a"; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
@@ -117,12 +142,62 @@
     ctx.restore();
   };
 
+  /* Hair styles drawn on the head (local coords, called from inside stickman). */
+  A.hair = function (ctx, HEAD, R, f, style, col) {
+    ctx.fillStyle = col; ctx.strokeStyle = OUT; ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    switch (style) {
+      case "spiky":
+        for (let k = -2; k <= 2; k++) {
+          const x = k * 4.2;
+          ctx.moveTo(x - 3, HEAD - R + 1);
+          ctx.lineTo(x, HEAD - R - 7);
+          ctx.lineTo(x + 3, HEAD - R + 1);
+        }
+        ctx.fill(); ctx.stroke(); break;
+      case "bowl":
+        ctx.arc(0, HEAD - 1, R + 1.5, Math.PI, 0);
+        ctx.lineTo(R + 1.5, HEAD - 1); ctx.lineTo(-R - 1.5, HEAD - 1);
+        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case "pony":
+        ctx.arc(0, HEAD - 2, R + 1.5, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.ellipse(-f * (R + 4), HEAD + 3, 4, 9, f * 0.4, 0, 7);
+        ctx.fill(); ctx.stroke(); break;
+      case "afro":
+        ctx.arc(0, HEAD - 3, R + 5.5, 0, 7); ctx.fill(); ctx.stroke(); break;
+      case "mohawk":
+        ctx.moveTo(-3, HEAD - R + 2);
+        ctx.quadraticCurveTo(0, HEAD - R - 13, 3, HEAD - R + 2);
+        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+    }
+  };
+
   /* Hands position for a given pose, in world coords — so games can put a ball
      or a racket exactly where the character is holding it. */
   A.handPos = function (x, y, opts) {
     const o = opts || {}, s = o.scale || 1, f = o.face === -1 ? -1 : 1;
     const p = A.pose(o.pose, o.t, f), SHO = -40;
     return { x: x + p.a1[0] * s, y: y + (SHO + p.a1[1]) * s - p.bob * s };
+  };
+
+  /* The game currency: a gold coin stamped with an M. squash = 0..1 for spin. */
+  A.coin = function (ctx, x, y, r, squash) {
+    const sc = squash == null ? 1 : squash;
+    ctx.save(); ctx.translate(x, y); ctx.scale(Math.max(0.06, sc), 1);
+    const g = ctx.createRadialGradient(-r * 0.3, -r * 0.35, r * 0.15, 0, 0, r);
+    g.addColorStop(0, "#fff3b0"); g.addColorStop(0.5, "#ffd24d"); g.addColorStop(1, "#d99a1b");
+    ctx.fillStyle = g; ctx.strokeStyle = "#a8780f"; ctx.lineWidth = Math.max(1.5, r * 0.13);
+    ctx.beginPath(); ctx.arc(0, 0, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.strokeStyle = "rgba(255,255,255,0.55)"; ctx.lineWidth = Math.max(1, r * 0.09);
+    ctx.beginPath(); ctx.arc(0, 0, r * 0.72, 0, 7); ctx.stroke();
+    if (sc > 0.45) {                       // only stamp the M when facing us
+      ctx.fillStyle = "#8a5f08";
+      ctx.font = `900 ${Math.round(r * 1.15)}px system-ui`;
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.fillText("M", 0, r * 0.06);
+    }
+    ctx.restore();
   };
 
   // ---- cartoon balls ----
@@ -213,18 +288,18 @@
     const GLOW = { fire: "#ff7a3a", ice: "#7ce8ff", venom: "#7dff4d", shadow: "#b46bff" }[fx];
     if (GLOW) { ctx.shadowColor = GLOW; ctx.shadowBlur = 22; }
 
-    // hilt
-    ctx.fillStyle = "#8a6234"; ctx.strokeStyle = OUT; ctx.lineWidth = 2.5;
-    ctx.beginPath(); ctx.rect(-14, -3.5, 14, 7); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.rect(-2, -9, 6, 18); ctx.fill(); ctx.stroke();   // crossguard
+    // hilt — grip sits IN the hand at the origin
+    ctx.fillStyle = "#8a6234"; ctx.strokeStyle = OUT; ctx.lineWidth = 2.2;
+    ctx.beginPath(); ctx.rect(-10, -2.6, 11, 5.2); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(-1, -6.5, 4.5, 13); ctx.fill(); ctx.stroke();   // crossguard
 
     // blade
     const g = ctx.createLinearGradient(0, 0, len, 0);
     g.addColorStop(0, color); g.addColorStop(0.6, "#ffffff"); g.addColorStop(1, color);
     ctx.fillStyle = g;
     ctx.beginPath();
-    ctx.moveTo(4, -6); ctx.lineTo(len - 12, -6); ctx.lineTo(len, 0);
-    ctx.lineTo(len - 12, 6); ctx.lineTo(4, 6); ctx.closePath();
+    ctx.moveTo(3.5, -4.4); ctx.lineTo(len - 9, -4.4); ctx.lineTo(len, 0);
+    ctx.lineTo(len - 9, 4.4); ctx.lineTo(3.5, 4.4); ctx.closePath();
     ctx.fill(); ctx.stroke();
     ctx.shadowBlur = 0;
 

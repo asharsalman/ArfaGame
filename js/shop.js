@@ -108,12 +108,26 @@
     { n: "Violet Vest", c: "#b46bff", p: 200, x: "shirt" },
   ]);
 
+  add("hair", "stickman", [
+    { n: "Bald", c: null, p: 0, x: "" },
+    { n: "Spiky Hair", c: "#3a2a1a", p: 90, x: "spiky" },
+    { n: "Bowl Cut", c: "#c9954f", p: 110, x: "bowl" },
+    { n: "Ponytail", c: "#6b3a1a", p: 130, x: "pony" },
+    { n: "Big Afro", c: "#2a1a12", p: 170, x: "afro" },
+    { n: "Neon Mohawk", c: "#4df0ff", p: 220, x: "mohawk" },
+  ]);
+
   window.SHOP_ITEMS = I;
 
   // Equipped stickman look, used by every game via Art.stickman defaults.
   window.stickmanStyle = function () {
     const hatItem = window.SHOP_ITEMS.find((i) => i.game === "hat" && Eng.isEquipped(i)) || {};
     const bodyItem = window.SHOP_ITEMS.find((i) => i.game === "body" && Eng.isEquipped(i)) || {};
-    return { hat: hatItem.extra || "", hatColor: hatItem.color, shirt: bodyItem.color || null };
+    const hairItem = window.SHOP_ITEMS.find((i) => i.game === "hair" && Eng.isEquipped(i)) || {};
+    return {
+      hat: hatItem.extra || "", hatColor: hatItem.color,
+      shirt: bodyItem.color || null,
+      hair: hairItem.extra || "", hairColor: hairItem.color,
+    };
   };
 })();

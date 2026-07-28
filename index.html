@@ -16,6 +16,16 @@
     <header class="hero">
       <h1 class="logo">GAMES</h1>
       <p class="tagline">Mini-game arcade &mdash; grab a friend &amp; pick one</p>
+      <div class="modes">
+        <button id="modeQuick" class="modebtn active">
+          <span class="mtitle">QUICK MATCH</span>
+          <span class="msub">Pick one game &amp; play</span>
+        </button>
+        <button id="modeCup" class="modebtn">
+          <span class="mtitle">TOURNAMENT</span>
+          <span class="msub">5 games &middot; most points wins</span>
+        </button>
+      </div>
       <nav id="tabs" class="tabs"></nav>
     </header>
     <main id="grid" class="grid"></main>
@@ -35,6 +45,16 @@
       <p id="chooserHint" class="hint"></p>
       <div id="chooserBtns" class="pcount"></div>
       <button id="chooserCancel" class="back">Cancel</button>
+    </div>
+  </div>
+
+  <!-- TOURNAMENT standings between rounds -->
+  <div id="cup" class="modal" hidden>
+    <div class="modal-card cupcard">
+      <h2 id="cupTitle">Tournament</h2>
+      <p id="cupHint" class="hint"></p>
+      <div id="cupBoard" class="cupboard"></div>
+      <button id="cupNext" class="shopbtn">Next game &rarr;</button>
     </div>
   </div>
 

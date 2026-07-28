@@ -99,6 +99,37 @@ kbd {
 }
 .tagline { color: var(--muted); margin: 6px 0 16px; font-size: clamp(13px, 2vw, 16px); }
 
+/* mode picker */
+.modes { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin: 0 0 16px; }
+.modebtn {
+  display: flex; flex-direction: column; gap: 3px; align-items: center;
+  padding: 12px 28px; border-radius: 14px; cursor: pointer;
+  border: 2px solid #2c365e; background: rgba(255, 255, 255, 0.03);
+  color: var(--muted); transition: 0.15s;
+}
+.modebtn .mtitle { font: 900 17px system-ui; letter-spacing: 0.06em; }
+.modebtn .msub { font: 600 11.5px system-ui; opacity: 0.85; }
+.modebtn:hover { border-color: var(--accent); color: var(--fg); }
+.modebtn.active {
+  color: #06121a; border-color: transparent;
+  background: linear-gradient(100deg, var(--accent), #7af);
+  box-shadow: 0 8px 26px -8px var(--accent);
+}
+#modeCup.active { background: linear-gradient(100deg, #ffd24d, #ff9f4d); box-shadow: 0 8px 26px -8px #ffd24d; }
+
+/* tournament standings */
+.cupcard { min-width: min(430px, 90vw); }
+.cupboard { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.cuprow {
+  display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px;
+  padding: 10px 14px; border-radius: 11px; text-align: left;
+  background: color-mix(in srgb, var(--c) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 45%, transparent);
+}
+.cuppos { font: 900 16px system-ui; color: #06121a; background: var(--c); border-radius: 50%; width: 26px; height: 26px; display: grid; place-items: center; }
+.cupname { font: 800 17px system-ui; color: var(--c); }
+.cuppts { font: 800 16px system-ui; color: var(--fg); }
+
 .tabs { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
 .tab {
   border: 1px solid #2c365e;
@@ -267,10 +298,22 @@ body.playing #stage { display: flex; }
 /* ---------- wallet + shop ---------- */
 .wallet { position: absolute; top: 18px; right: clamp(16px, 4vw, 60px); display: flex; gap: 10px; align-items: center; z-index: 5; }
 .coinbal {
+  display: inline-flex; align-items: center; gap: 8px;
   font: 800 16px system-ui; color: #ffcf33;
   background: rgba(255, 207, 51, 0.12); border: 1px solid rgba(255, 207, 51, 0.4);
-  padding: 7px 14px; border-radius: 999px;
+  padding: 6px 14px 6px 8px; border-radius: 999px;
 }
+/* golden coin with an M on it */
+.mcoin {
+  display: inline-grid; place-items: center;
+  width: 22px; height: 22px; border-radius: 50%;
+  background: radial-gradient(circle at 34% 30%, #fff3b0 0%, #ffd24d 45%, #d99a1b 100%);
+  border: 1.5px solid #a8780f;
+  box-shadow: 0 0 10px -2px rgba(255, 207, 51, 0.9), inset 0 -2px 3px rgba(0, 0, 0, 0.25);
+  font: 900 13px/1 system-ui; color: #8a5f08;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+}
+.mcoin.sm { width: 17px; height: 17px; font-size: 10.5px; border-width: 1.2px; }
 .shopbtn {
   font: 800 14px system-ui; color: #06121a; cursor: pointer;
   background: linear-gradient(90deg, #ffd24d, #ff9f4d); border: none;

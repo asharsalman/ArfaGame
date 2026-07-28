@@ -142,6 +142,10 @@
         Eng.SESSION.wins[rank[0].b.id] = (Eng.SESSION.wins[rank[0].b.id] || 0) + 1;
         Eng.saveSession();
         coinReward = 30; Eng.addCoins(coinReward);
+        // in a tournament the hub takes over: bank the points and show standings
+        if (window.GameHub && GameHub.cupActive && GameHub.cupActive()) {
+          setTimeout(() => GameHub.cupRecord(rank), 1400);
+        }
       },
       update(dt, input) { t += dt; if (input.pressed("KeyR")) { active = false; return true; } return false; },
       render(ctx, W, H) {

@@ -39,6 +39,8 @@
   let state = "menu";
   let current = null, currentDef = null, currentCount = 1, currentBot = null;
   let last = 0, activeFilter = "All";
+  let mode = "quick";                       // 'quick' | 'cup'
+  let cup = null;                           // active tournament
 
   function boot() {
     canvas = document.getElementById("game");
@@ -63,6 +65,9 @@
     document.getElementById("chooserCancel").addEventListener("click", hideChooser);
     document.getElementById("shopBtn").addEventListener("click", openShop);
     document.getElementById("shopClose").addEventListener("click", closeShop);
+    document.getElementById("modeQuick").addEventListener("click", () => setMode("quick"));
+    document.getElementById("modeCup").addEventListener("click", () => setMode("cup"));
+    document.getElementById("cupNext").addEventListener("click", cupNext);
 
     last = performance.now();
     requestAnimationFrame(loop);
@@ -102,6 +107,107 @@
       grid.appendChild(card);
     });
   }
+
+  // ---------- modes ----------
+  function setMode(m) {
+    mode = m;
+    document.getElementById("modeQuick").classList.toggle("active", m === "quick");
+    document.getElementById("modeCup").classList.toggle("active", m === "cup");
+    document.querySelector(".tagline").textContent = m === "cup"
+      ? "Tournament — 5 random games, 3/2/1/0 points each, most points is champion"
+      : "Mini-game arcade — grab a friend & pick one";
+    if (m === "cup") startCupSetup(); else { cup = null; buildMenu(); }
+  }
+
+  // Tournament: ask player count, then whether the empty slots are CPUs.
+  function startCupSetup() {
+    const modal = document.getElementById("chooser");
+    document.getElementById("chooserTitle").textContent = "Tournament";
+    document.getElementById("chooserHint").textContent = "How many players?";
+    const box = document.getElementById("chooserBtns");
+    box.innerHTML = "";
+    for (let n = 1; n <= 4; n++) {
+      const b = mkBtn(Eng.PLAYERS[n - 1].color, n, `player${n > 1 ? "s" : ""}`);
+      b.onclick = () => (n < 4 ? askRobots(n) : beginCup(4, 0));
+      box.appendChild(b);
+    }
+    modal.hidden = false;
+  }
+  function askRobots(n) {
+    const box = document.getElementById("chooserBtns");
+    document.getElementById("chooserHint").textContent =
+      `${n} human${n > 1 ? "s" : ""} — fill the rest with robots?`;
+    box.innerHTML = "";
+    const no = mkBtn(Eng.PLAYERS[n - 1].color, n, "just us");
+    no.onclick = () => beginCup(n, 0);
+    box.appendChild(no);
+    for (let r = 1; r <= 4 - n; r++) {
+      const b = mkBtn("#9d7bff", "🤖" + r, `+${r} robot${r > 1 ? "s" : ""}`);
+      b.onclick = () => beginCup(n + r, r);
+      box.appendChild(b);
+    }
+  }
+  function beginCup(total, robots) {
+    hideChooser();
+    const pool = GAMES.filter((g) => g.min <= total && g.max >= total && !g.selfSelect);
+    const picks = [];
+    const bag = pool.slice();
+    for (let i = 0; i < 5 && bag.length; i++) picks.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    cup = {
+      total, robots, games: picks, round: 0,
+      points: Object.fromEntries(Eng.PLAYERS.slice(0, total).map((p) => [p.id, 0])),
+    };
+    Eng.resetSession();
+    showCupBoard(true);
+  }
+
+  function showCupBoard(first) {
+    const modal = document.getElementById("cup");
+    const done = cup.round >= cup.games.length;
+    document.getElementById("cupTitle").textContent = done ? "🏆 Champion!" : "Tournament";
+    document.getElementById("cupHint").textContent = done
+      ? `${champion().name} wins the cup!`
+      : `Game ${cup.round + 1} of ${cup.games.length} — ${cup.games[cup.round].name}`;
+
+    const board = document.getElementById("cupBoard");
+    board.innerHTML = "";
+    Eng.PLAYERS.slice(0, cup.total)
+      .slice().sort((a, b) => cup.points[b.id] - cup.points[a.id])
+      .forEach((p, i) => {
+        const isBot = p.id > cup.total - cup.robots;
+        const row = document.createElement("div");
+        row.className = "cuprow"; row.style.setProperty("--c", p.color);
+        row.innerHTML = `<span class="cuppos">${i + 1}</span>
+          <span class="cupname">${isBot ? "🤖 " : ""}${p.name}</span>
+          <span class="cuppts">${cup.points[p.id]} pts</span>`;
+        board.appendChild(row);
+      });
+    document.getElementById("cupNext").textContent = done
+      ? "Back to menu" : first ? `Start: ${cup.games[0].name} →` : `Next: ${cup.games[cup.round].name} →`;
+    modal.hidden = false;
+  }
+  function champion() {
+    const ids = Object.keys(cup.points).sort((a, b) => cup.points[b] - cup.points[a]);
+    return Eng.PLAYERS[+ids[0] - 1];
+  }
+  function cupNext() {
+    document.getElementById("cup").hidden = true;
+    if (cup.round >= cup.games.length) { cup = null; setMode("quick"); return; }
+    const def = cup.games[cup.round];
+    launch(def, cup.total, cup.robots ? { diff: "normal" } : null);
+  }
+  // called when a game reports its final ranking
+  function cupRecord(ranking) {
+    if (!cup) return;
+    ranking.forEach((r, i) => {
+      cup.points[r.b.id] = (cup.points[r.b.id] || 0) + ([3, 2, 1, 0][i] || 0);
+    });
+    cup.round++;
+    exitToMenu();
+    showCupBoard(false);
+  }
+  GameHub.cupActive = () => !!cup;
+  GameHub.cupRecord = cupRecord;
 
   // ---------- chooser (player count + optional CPU difficulty) ----------
   function choose(def) {
@@ -157,13 +263,18 @@
     b.innerHTML = `<span class="big">${big}</span><span>${sub}</span>`;
     return b;
   }
-  function hideChooser() { document.getElementById("chooser").hidden = true; }
+  function hideChooser() {
+    document.getElementById("chooser").hidden = true;
+    document.getElementById("chooserBtns").innerHTML = "";   // drop stale handlers
+  }
 
   // ---------- shop ----------
+  const COIN = `<span class="mcoin">M</span>`;
+  const COIN_SM = `<span class="mcoin sm">M</span>`;
   function refreshCoins() {
-    const c = `🪙 ${Eng.coins()}`;
-    const a = document.getElementById("coinBal"); if (a) a.textContent = c;
-    const b = document.getElementById("shopCoins"); if (b) b.textContent = c;
+    const c = `${COIN}${Eng.coins()}`;
+    const a = document.getElementById("coinBal"); if (a) a.innerHTML = c;
+    const b = document.getElementById("shopCoins"); if (b) b.innerHTML = c;
   }
   function openShop() { buildShop(); refreshCoins(); document.getElementById("shop").hidden = false; }
   function closeShop() { document.getElementById("shop").hidden = true; refreshCoins(); }
@@ -183,6 +294,9 @@
     section("Stickman — Hats", "#ffd24d",
       `<svg viewBox="0 0 48 48" fill="currentColor"><ellipse cx="24" cy="32" rx="20" ry="5"/><path d="M13 30 q1-18 11-18 t11 18 z"/></svg>`,
       ITEMS.filter((i) => i.game === "hat"));
+    section("Stickman — Hair", "#ff8a3a",
+      `<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="30" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 26 q3-16 13-16 t13 16 q-6-7-13-7 t-13 7z"/></svg>`,
+      ITEMS.filter((i) => i.game === "hair"));
     section("Stickman — Shirts", "#4dff9e",
       `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><circle cx="24" cy="11" r="6" fill="currentColor"/><path d="M24 18 v14 M24 32 l-8 12 M24 32 l8 12 M12 24 l12 3 l12-3"/></svg>`,
       ITEMS.filter((i) => i.game === "body"));
@@ -203,11 +317,11 @@
     card.appendChild(nm);
     const b = document.createElement("button");
     b.className = "buybtn " + (eq ? "eq" : owned ? "own" : "");
-    b.textContent = eq ? "✓ Equipped" : owned ? "Equip" : "Buy 🪙" + it.price;
+    b.innerHTML = eq ? "✓ Equipped" : owned ? "Equip" : `Buy ${COIN_SM}${it.price}`;
     b.onclick = () => {
       if (Eng.isEquipped(it)) return;
       if (Eng.isOwned(it)) Eng.equipItem(it);
-      else if (!Eng.buyItem(it)) { b.textContent = "Need more 🪙"; b.classList.add("nope"); return; }
+      else if (!Eng.buyItem(it)) { b.innerHTML = `Need more ${COIN_SM}`; b.classList.add("nope"); return; }
       buildShop(); refreshCoins();
     };
     card.appendChild(b);
@@ -309,11 +423,13 @@
       case "chicken":
         Art.chicken(c, cx - 6, cy + 30, 1.5, col, 0.4, 1); break;
       case "stickman": {
-        const isHat = it.game === "hat";
         Art.stickman(c, cx, H2 - 16, {
           noStyle: true, color: "#8fa4d6", scale: 1.35, pose: "idle", t: 0,
-          hat: isHat ? it.extra : "", hatColor: isHat ? it.color : undefined,
-          shirt: isHat ? null : it.color,
+          hat: it.game === "hat" ? it.extra : "",
+          hatColor: it.game === "hat" ? it.color : undefined,
+          hair: it.game === "hair" ? it.extra : "",
+          hairColor: it.game === "hair" ? it.color : undefined,
+          shirt: it.game === "body" ? it.color : null,
         });
         break;
       }
