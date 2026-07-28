@@ -53,7 +53,17 @@
   /* Draw a stickman standing with its FEET at (x, y).
      opts: { color, scale, pose, face:1|-1, t, hat, hatColor, glow } */
   A.stickman = function (ctx, x, y, opts) {
-    const o = opts || {};
+    let o = opts || {};
+    // apply the player's shop-equipped hat / body colour unless the game forces one
+    if (!o.noStyle && window.stickmanStyle) {
+      const st = window.stickmanStyle(o.color);
+      o = Object.assign({}, o, {
+        // NB: never override o.color — that's the player's identity colour
+        shirt: o.shirt || st.shirt,
+        hat: o.hat || st.hat,
+        hatColor: o.hatColor || st.hatColor,
+      });
+    }
     const s = o.scale || 1, c = o.color || "#fff";
     const f = o.face === -1 ? -1 : 1;
     const p = A.pose(o.pose, o.t, f);
@@ -71,6 +81,11 @@
     limb(ctx, 0, SHO, p.a1[0], SHO + p.a1[1], 6, c);
     limb(ctx, 0, SHO, p.a2[0], SHO + p.a2[1], 6, c);
     limb(ctx, 0, SHO - 2, 0, HIP, 9, c);
+    if (o.shirt) {                       // purchased shirt over the torso
+      ctx.strokeStyle = o.shirt; ctx.lineWidth = 13; ctx.lineCap = "butt";
+      ctx.beginPath(); ctx.moveTo(0, SHO + 1); ctx.lineTo(0, HIP - 3); ctx.stroke();
+      ctx.lineCap = "round";
+    }
 
     ctx.strokeStyle = OUT; ctx.lineWidth = 4;
     ctx.fillStyle = c;
@@ -187,6 +202,60 @@
     // eye
     ctx.fillStyle = OUT;
     ctx.beginPath(); ctx.arc(f * 10, -32.5, 1.9, 0, 7); ctx.fill();
+    ctx.restore();
+  };
+
+  /* Sword blade held at (x,y), pointing along `ang` (radians, 0 = right).
+     fx: "" | "fire" | "ice" | "venom" | "shadow" */
+  A.blade = function (ctx, x, y, ang, len, color, fx, t) {
+    ctx.save();
+    ctx.translate(x, y); ctx.rotate(ang);
+    const GLOW = { fire: "#ff7a3a", ice: "#7ce8ff", venom: "#7dff4d", shadow: "#b46bff" }[fx];
+    if (GLOW) { ctx.shadowColor = GLOW; ctx.shadowBlur = 22; }
+
+    // hilt
+    ctx.fillStyle = "#8a6234"; ctx.strokeStyle = OUT; ctx.lineWidth = 2.5;
+    ctx.beginPath(); ctx.rect(-14, -3.5, 14, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.rect(-2, -9, 6, 18); ctx.fill(); ctx.stroke();   // crossguard
+
+    // blade
+    const g = ctx.createLinearGradient(0, 0, len, 0);
+    g.addColorStop(0, color); g.addColorStop(0.6, "#ffffff"); g.addColorStop(1, color);
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.moveTo(4, -6); ctx.lineTo(len - 12, -6); ctx.lineTo(len, 0);
+    ctx.lineTo(len - 12, 6); ctx.lineTo(4, 6); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // elemental trim
+    if (fx === "fire") {
+      ctx.fillStyle = "rgba(255,140,50,0.85)";
+      for (let i = 0; i < 5; i++) {
+        const fx0 = 10 + i * (len - 16) / 5;
+        const h = 7 + Math.sin(t * 14 + i * 1.7) * 5;
+        ctx.beginPath(); ctx.moveTo(fx0, -6); ctx.lineTo(fx0 + 5, -6 - h); ctx.lineTo(fx0 + 10, -6); ctx.fill();
+      }
+    } else if (fx === "ice") {
+      ctx.strokeStyle = "rgba(200,245,255,0.95)"; ctx.lineWidth = 2;
+      for (let i = 0; i < 4; i++) {
+        const ix = 14 + i * (len - 20) / 4;
+        ctx.beginPath(); ctx.moveTo(ix, -6); ctx.lineTo(ix + 5, -12); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ix, 6); ctx.lineTo(ix + 5, 12); ctx.stroke();
+      }
+    } else if (fx === "venom") {
+      ctx.fillStyle = "rgba(125,255,77,0.9)";
+      for (let i = 0; i < 3; i++) {
+        const dx = 18 + i * (len - 24) / 3;
+        const dy = 8 + ((t * 60 + i * 22) % 16);
+        ctx.beginPath(); ctx.ellipse(dx, dy, 2.6, 4, 0, 0, 7); ctx.fill();
+      }
+    } else if (fx === "shadow") {
+      ctx.globalAlpha = 0.4; ctx.fillStyle = "#b46bff";
+      ctx.beginPath();
+      ctx.moveTo(4, -9); ctx.lineTo(len, 0); ctx.lineTo(4, 9); ctx.closePath(); ctx.fill();
+      ctx.globalAlpha = 1;
+    }
     ctx.restore();
   };
 

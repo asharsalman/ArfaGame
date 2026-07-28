@@ -48,7 +48,9 @@
       function finishRoll() {
         const knocked = pins.filter((p) => p.down).length;
         players[turn].score += knocked;
-        msg = knocked === 10 ? "STRIKE!" : `${players[turn].b.name} knocked ${knocked}`;
+        msg = ball.gutter && knocked === 0 ? "GUTTER BALL!"
+            : knocked === 10 ? "STRIKE!"
+            : `${players[turn].b.name} knocked ${knocked}`;
         msgT = 1.5;
       }
       function nextTurn() {
@@ -78,7 +80,8 @@
           if (power < 0.1) { power = 0.1; powDir = 1; }
           if (input.pressed(cur.b.action)) {
             const sp = 400 + power * 620;
-            ball.vy = -sp; ball.vx = aim * sp * 0.34; ball.rolling = true;
+            // wider aim swing so a badly-timed lock really can find the gutter
+            ball.vy = -sp; ball.vx = aim * sp * 0.62; ball.rolling = true; ball.gutter = false;
             phase = "roll";
           }
           return;
@@ -87,12 +90,13 @@
         // rolling
         ball.x += ball.vx * dt; ball.y += ball.vy * dt;
         ball.vx *= Math.exp(-0.25 * dt); ball.vy *= Math.exp(-0.16 * dt);
-        if (ball.x < LX + BR) { ball.x = LX + BR; ball.vx = Math.abs(ball.vx) * 0.4; }
-        if (ball.x > RX - BR) { ball.x = RX - BR; ball.vx = -Math.abs(ball.vx) * 0.4; }
+        // stray wide and you're in the gutter — it rides it out and hits nothing
+        if (ball.x < LX + BR) { ball.x = LX + BR - 6; ball.vx = 0; ball.gutter = true; }
+        if (ball.x > RX - BR) { ball.x = RX - BR + 6; ball.vx = 0; ball.gutter = true; }
 
         // ball vs pins
         for (const p of pins) {
-          if (p.down) continue;
+          if (p.down || ball.gutter) continue;
           if (dist(ball.x, ball.y, p.x, p.y) < BR + PR) {
             const a = Math.atan2(p.y - ball.y, p.x - ball.x);
             p.vx = Math.cos(a) * 250 + ball.vx * 0.35;

@@ -63,14 +63,16 @@
         step(p, lo, hi, dt);
       }
 
-      function bump(p) {
+      // dir = which way this player should send it (+1 = toward the right side)
+      function bump(p, dir) {
         const cy = p.y - PR;
         const d = dist(p.x, cy, ball.x, ball.y);
-        if (d < PR + BR && d > 0) {
+        if (d < PR + BR + 8 && d > 0) {
           const nx = (ball.x - p.x) / d, ny = (ball.y - cy) / d;
-          ball.x = p.x + nx * (PR + BR); ball.y = cy + ny * (PR + BR);
-          ball.vx = nx * 300 + p.vx * 0.55;
-          ball.vy = Math.min(ny * 330, -300) + (p.vy < 0 ? p.vy * 0.42 : 0);
+          ball.x = p.x + nx * (PR + BR + 8); ball.y = cy + ny * (PR + BR + 8);
+          // always pops UP and ACROSS, so rallies actually clear the net
+          ball.vx = nx * 210 + dir * 240 + p.vx * 0.5;
+          ball.vy = Math.min(ny * 300, -440) + (p.vy < 0 ? p.vy * 0.35 : 0);
         }
       }
 
@@ -90,9 +92,9 @@
         if (BOT) botMove(p2, NETX + PR + 6, W - PR, dt);
         else move(p2, NETX + PR + 6, W - PR, dt);
 
-        ball.vy += GRAV * 0.52 * dt;
+        ball.vy += GRAV * 0.42 * dt;          // floatier — you can get under it
         ball.x += ball.vx * dt; ball.y += ball.vy * dt;
-        ball.vx *= Math.exp(-0.16 * dt);
+        ball.vx *= Math.exp(-0.12 * dt);
 
         if (ball.x < BR) { ball.x = BR; ball.vx = Math.abs(ball.vx); }
         if (ball.x > W - BR) { ball.x = W - BR; ball.vx = -Math.abs(ball.vx); }
@@ -104,7 +106,7 @@
           else { ball.x = NETX + BR + 5; ball.vx = Math.abs(ball.vx) * 0.7; }
         }
 
-        bump(p1); bump(p2);
+        bump(p1, 1); bump(p2, -1);
 
         if (ball.y > FLOOR - BR) { point(ball.x < NETX ? 2 : 1); return; }
       }

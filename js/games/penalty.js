@@ -1,7 +1,8 @@
-/* Penalty Shootout — 2 players (or vs CPU). Take turns striking and keeping.
-   Striker locks a sweeping aim marker; keeper has to read it and dive. */
+/* Penalty Shootout — 2 players (or vs CPU).
+   BOTH players move freely the whole time. The striker runs at the ball and
+   aims by the angle they approach from; the keeper runs the line and dives. */
 (function () {
-  const { clamp, rand, text } = Eng;
+  const { clamp, dist, rand, text } = Eng;
 
   GameHub.register({
     id: "penalty",
@@ -11,25 +12,26 @@
     cpu: true,
     color: "#4dff9e",
     icon: "🥅",
-    desc: "Swap between striker and keeper. Five spot-kicks each — most goals wins.",
-    controls: "Striker: action to shoot · Keeper: ←/→ move, action to dive",
+    desc: "Run at the ball and strike — the keeper runs the line and dives. 5 kicks each.",
+    controls: "Both move freely · striker: action to kick · keeper: action to dive",
     create(env) {
       const { W, H, input } = env;
       const ROUNDS = 5;
-      const GX0 = W / 2 - 260, GX1 = W / 2 + 260, GY = 118, GH = 190;
-      const LINE = GY + GH;                      // goal-line y the ball crosses
+      const GX0 = W / 2 - 250, GX1 = W / 2 + 250, GY = 132, GH = 176;
+      const LINE = GY + GH;                     // goal line
+      const SPOT = { x: W / 2, y: H - 128 };
+      const FLIGHT = 0.72;                      // seconds ball takes to reach the line
       const BOT = env.bot
-        ? ({ easy: { react: 0.34, err: 130 }, normal: { react: 0.2, err: 74 }, hard: { react: 0.1, err: 30 } })[env.bot.diff]
+        ? ({ easy: { spd: 200, react: 0.3, err: 120 }, normal: { spd: 290, react: 0.18, err: 66 }, hard: { spd: 380, react: 0.09, err: 26 } })[env.bot.diff]
         : null;
-      let strikerIdx, round, phase, t, aimX, aimDir, ball, keeper, msg, msgT, scores, matchOver, botPlan, time = 0;
+      let strikerIdx, round, phase, t, ball, st, kp, msg, msgT, scores, matchOver, time = 0, botDive;
       const results = Eng.Results();
 
       function newKick() {
-        phase = "aim"; t = 0;
-        aimX = W / 2; aimDir = Math.random() < 0.5 ? 1 : -1;
-        ball = { x: W / 2, y: H - 118, vx: 0, vy: 0, flying: false, targetX: 0 };
-        keeper = { x: W / 2, dive: 0, diveDir: 0, reacted: false };
-        botPlan = null;
+        phase = "live"; t = 0; botDive = null;
+        ball = { x: SPOT.x, y: SPOT.y, vx: 0, vy: 0, flying: false, z: 0 };
+        st = { x: SPOT.x - 70, y: SPOT.y + 30, cool: 0 };
+        kp = { x: W / 2, dive: 0, diveDir: 0, diveT: 0 };
       }
       function reset() {
         scores = [0, 0]; strikerIdx = 0; round = 0;
@@ -38,15 +40,14 @@
       reset();
 
       const keeperIdx = () => (strikerIdx === 0 ? 1 : 0);
-      const isBotKeeper = () => BOT && keeperIdx() === 1;
-      const isBotStriker = () => BOT && strikerIdx === 1;
+      const botIsKeeper = () => BOT && keeperIdx() === 1;
+      const botIsStriker = () => BOT && strikerIdx === 1;
 
       function endMatch() {
         const order = scores[0] >= scores[1] ? [0, 1] : [1, 0];
         results.open(order.map((i) => ({ b: Eng.PLAYERS[i], score: scores[i] })));
         matchOver = true;
       }
-
       function nextKick() {
         if (strikerIdx === 1) round++;
         strikerIdx = strikerIdx === 0 ? 1 : 0;
@@ -54,15 +55,22 @@
         newKick();
       }
 
-      function shoot(tx) {
-        ball.flying = true; ball.targetX = tx;
-        ball.vx = (tx - ball.x) / 0.62;
-        ball.vy = (LINE - 40 - ball.y) / 0.62;
-        phase = "flight"; t = 0;
-        if (isBotKeeper()) {
-          // CPU keeper reacts after a delay, with aim error
-          botPlan = { at: BOT.react, to: tx + rand(-BOT.err, BOT.err), done: false };
-        }
+      // where a shot from the current striker position would cross the goal line
+      function aimTarget() {
+        const dx = ball.x - st.x, dy = ball.y - st.y;
+        const d = Math.hypot(dx, dy) || 1;
+        return clamp(ball.x + (dx / d) * 330, GX0 - 70, GX1 + 70);
+      }
+
+      function kickBall() {
+        // Fixed flight time so every shot is reactable — the keeper always gets
+        // FLIGHT seconds to read it and dive.
+        const tx = aimTarget();
+        ball.vx = (tx - ball.x) / FLIGHT;
+        ball.vy = ((LINE - 26) - ball.y) / FLIGHT;
+        ball.flying = true;
+        phase = "flight";
+        if (botIsKeeper()) botDive = { at: BOT.react, to: tx + rand(-BOT.err, BOT.err), done: false };
       }
 
       function update(dt) {
@@ -72,116 +80,125 @@
 
         const sB = Eng.PLAYERS[strikerIdx], kB = Eng.PLAYERS[keeperIdx()];
 
-        if (phase === "aim") {
-          t += dt;
-          aimX += aimDir * 430 * dt;
-          if (aimX < GX0 + 26) { aimX = GX0 + 26; aimDir = 1; }
-          if (aimX > GX1 - 26) { aimX = GX1 - 26; aimDir = -1; }
-          // keeper may pre-position
-          if (!isBotKeeper()) {
-            if (input.down(kB.left)) keeper.x -= 300 * dt;
-            if (input.down(kB.right)) keeper.x += 300 * dt;
-            keeper.x = clamp(keeper.x, GX0 + 30, GX1 - 30);
+        // ---- keeper moves at ALL times ----
+        if (botIsKeeper()) {
+          if (phase === "live") {
+            const target = W / 2 + Math.sin(time * 1.1) * 90;
+            kp.x += clamp(target - kp.x, -BOT.spd * 0.5 * dt, BOT.spd * 0.5 * dt);
+          } else if (botDive && !botDive.done) {
+            if (t >= botDive.at) { botDive.done = true; kp.diveDir = Math.sign(botDive.to - kp.x) || 1; kp.dive = 1; }
           }
-          const fire = isBotStriker() ? t > rand(0.6, 0.9) || t > 1.6 : input.pressed(sB.action);
-          if (fire) shoot(aimX);
-          return;
+        } else {
+          const sp = 330 * dt;
+          if (input.down(kB.left)) kp.x -= sp;
+          if (input.down(kB.right)) kp.x += sp;
+          if (input.pressed(kB.action) && kp.dive === 0) {
+            kp.diveDir = 0; kp.dive = 1; kp.diveT = 0;
+            if (input.down(kB.left)) kp.diveDir = -1;
+            else if (input.down(kB.right)) kp.diveDir = 1;
+          }
         }
+        if (kp.dive > 0) { kp.diveT += dt; kp.x += kp.diveDir * 470 * dt; if (kp.diveT > 0.75) { kp.dive = 0; kp.diveT = 0; } }
+        kp.x = clamp(kp.x, GX0 + 18, GX1 - 18);
 
-        if (phase === "flight") {
-          t += dt;
-          ball.x += ball.vx * dt; ball.y += ball.vy * dt;
-
-          if (isBotKeeper()) {
-            if (botPlan && !botPlan.done && t >= botPlan.at) {
-              botPlan.done = true;
-              keeper.diveDir = Math.sign(botPlan.to - keeper.x) || 1;
-              keeper.dive = 1;
-            }
+        // ---- striker moves at ALL times ----
+        if (phase === "live") {
+          if (botIsStriker()) {
+            const tx = SPOT.x - 60, ty = SPOT.y + 20;
+            st.x += clamp(tx - st.x, -BOT.spd * dt, BOT.spd * dt);
+            st.y += clamp(ty - st.y, -BOT.spd * dt, BOT.spd * dt);
+            t += dt;
+            if (t > 1.1) kickBall();
           } else {
-            if (input.down(kB.left)) keeper.x -= 330 * dt;
-            if (input.down(kB.right)) keeper.x += 330 * dt;
-            if (input.pressed(kB.action) && !keeper.reacted) {
-              keeper.reacted = true;
-              keeper.diveDir = Math.sign(ball.x - keeper.x) || 1;
-              keeper.dive = 1;
-            }
-          }
-          if (keeper.dive > 0) keeper.x += keeper.diveDir * 430 * dt;
-          keeper.x = clamp(keeper.x, GX0 + 20, GX1 - 20);
-
-          if (ball.y <= LINE - 34) {                 // reached the line
-            const reach = keeper.dive > 0 ? 62 : 40;
-            const saved = Math.abs(keeper.x - ball.x) < reach;
-            if (saved) { msg = `${kB.name} SAVES!`; }
-            else { scores[strikerIdx]++; msg = "GOAL!"; }
-            phase = "result"; msgT = 1.35;
+            const sp = 300 * dt;
+            if (input.down(sB.left)) st.x -= sp;
+            if (input.down(sB.right)) st.x += sp;
+            if (input.down(sB.up)) st.y -= sp;
+            if (input.down(sB.down)) st.y += sp;
+            st.x = clamp(st.x, 40, W - 40);
+            st.y = clamp(st.y, LINE + 40, H - 30);
+            if (input.pressed(sB.action) && dist(st.x, st.y, ball.x, ball.y) < 62) kickBall();
           }
           return;
         }
-      }
 
-      function keeperFig(ctx, c) {
-        Art.shadow(ctx, keeper.x, LINE - 4, 20, 0.25);
-        Art.stickman(ctx, keeper.x, LINE - 6, {
-          color: c, scale: 1.15, t: time,
-          pose: keeper.dive > 0 ? "dive" : "guard",
-          face: keeper.dive > 0 ? keeper.diveDir : 1,
-        });
+        // ---- flight ----
+        t += dt;
+        ball.x += ball.vx * dt; ball.y += ball.vy * dt;
+
+        if (ball.y <= LINE - 26) {
+          const reach = kp.dive > 0 ? 92 : 52;
+          if (Math.abs(kp.x - ball.x) < reach && ball.x > GX0 - 20 && ball.x < GX1 + 20) {
+            msg = `${kB.name} SAVES!`;
+          } else if (ball.x < GX0 || ball.x > GX1) {
+            msg = "MISSED!";
+          } else { scores[strikerIdx]++; msg = "GOAL!"; }
+          phase = "result"; msgT = 1.4;
+        }
+        if (ball.y < -40 || ball.x < -40 || ball.x > W + 40) { msg = "MISSED!"; phase = "result"; msgT = 1.3; }
       }
 
       function render(ctx) {
         const g = ctx.createLinearGradient(0, 0, 0, H);
-        g.addColorStop(0, "#0b2a4a"); g.addColorStop(0.45, "#10502c"); g.addColorStop(1, "#0a2f1a");
+        g.addColorStop(0, "#0b2a4a"); g.addColorStop(0.4, "#12592f"); g.addColorStop(1, "#0b3a1e");
         ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
-        // pitch stripes
-        ctx.fillStyle = "rgba(255,255,255,0.03)";
-        for (let y = LINE; y < H; y += 54) ctx.fillRect(0, y, W, 27);
-        // penalty arc + spot
-        ctx.strokeStyle = "rgba(255,255,255,0.35)"; ctx.lineWidth = 3;
-        ctx.beginPath(); ctx.moveTo(0, LINE); ctx.lineTo(W, LINE); ctx.stroke();
-        ctx.beginPath(); ctx.arc(W / 2, H - 118, 76, Math.PI, 0); ctx.stroke();
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(W / 2, H - 118, 4, 0, 7); ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.035)";
+        for (let y = LINE; y < H; y += 56) ctx.fillRect(0, y, W, 28);
 
-        // goal frame + net
-        ctx.strokeStyle = "rgba(255,255,255,0.14)"; ctx.lineWidth = 1;
-        for (let x = GX0; x <= GX1; x += 20) { ctx.beginPath(); ctx.moveTo(x, GY); ctx.lineTo(x, LINE); ctx.stroke(); }
-        for (let y = GY; y <= LINE; y += 20) { ctx.beginPath(); ctx.moveTo(GX0, y); ctx.lineTo(GX1, y); ctx.stroke(); }
-        ctx.strokeStyle = "#fff"; ctx.lineWidth = 7; ctx.lineJoin = "round";
+        ctx.strokeStyle = "rgba(255,255,255,0.4)"; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(0, LINE); ctx.lineTo(W, LINE); ctx.stroke();
+        ctx.beginPath(); ctx.arc(SPOT.x, SPOT.y, 82, Math.PI, 0); ctx.stroke();
+        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(SPOT.x, SPOT.y, 4, 0, 7); ctx.fill();
+        ctx.strokeRect(GX0 - 60, LINE, (GX1 - GX0) + 120, 96);
+
+        // net
+        ctx.strokeStyle = "rgba(255,255,255,0.18)"; ctx.lineWidth = 1;
+        for (let x = GX0; x <= GX1; x += 18) { ctx.beginPath(); ctx.moveTo(x, GY); ctx.lineTo(x, LINE); ctx.stroke(); }
+        for (let y = GY; y <= LINE; y += 18) { ctx.beginPath(); ctx.moveTo(GX0, y); ctx.lineTo(GX1, y); ctx.stroke(); }
+        ctx.strokeStyle = "#fff"; ctx.lineWidth = 8; ctx.lineJoin = "round";
         ctx.beginPath(); ctx.moveTo(GX0, LINE); ctx.lineTo(GX0, GY); ctx.lineTo(GX1, GY); ctx.lineTo(GX1, LINE); ctx.stroke();
 
         const sB = Eng.PLAYERS[strikerIdx], kB = Eng.PLAYERS[keeperIdx()];
-        keeperFig(ctx, kB.color);
 
-        // aim marker
-        if (phase === "aim") {
-          ctx.strokeStyle = sB.color; ctx.lineWidth = 4; ctx.shadowColor = sB.color; ctx.shadowBlur = 16;
-          ctx.beginPath(); ctx.arc(aimX, GY + GH * 0.45, 19, 0, 7); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(aimX - 27, GY + GH * 0.45); ctx.lineTo(aimX + 27, GY + GH * 0.45);
-          ctx.moveTo(aimX, GY + GH * 0.45 - 27); ctx.lineTo(aimX, GY + GH * 0.45 + 27); ctx.stroke();
-          ctx.shadowBlur = 0;
+        // keeper
+        Art.shadow(ctx, kp.x, LINE - 2, 20, 0.28);
+        Art.stickman(ctx, kp.x, LINE - 4, {
+          color: kB.color, scale: 1.2, t: time,
+          pose: kp.dive > 0 ? "dive" : "guard", face: kp.dive > 0 ? (kp.diveDir || 1) : 1,
+        });
+
+        // aim guide — shows exactly where the shot will cross the line, so the
+        // keeper can read it and the striker has to disguise it by moving late
+        if (phase === "live") {
+          const near = dist(st.x, st.y, ball.x, ball.y) < 62;
+          const tx = aimTarget();
+          ctx.strokeStyle = near ? sB.color : "rgba(255,255,255,0.25)";
+          ctx.lineWidth = near ? 4 : 2; ctx.setLineDash([10, 9]);
+          ctx.beginPath(); ctx.moveTo(ball.x, ball.y); ctx.lineTo(tx, LINE - 26); ctx.stroke();
+          ctx.setLineDash([]);
+          if (near) {
+            ctx.strokeStyle = sB.color; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.arc(tx, LINE - 26, 13, 0, 7); ctx.stroke();
+          }
         }
 
         // striker
-        const sx = W / 2 - 46, sy = H - 92;
-        Art.shadow(ctx, sx, sy + 2, 18);
-        Art.stickman(ctx, sx, sy, {
-          color: sB.color, scale: 1.15, t: time,
-          pose: phase === "aim" ? "ready" : "run", face: 1,
+        Art.shadow(ctx, st.x, st.y + 2, 18);
+        Art.stickman(ctx, st.x, st.y, {
+          color: sB.color, scale: 1.2, t: time,
+          pose: phase === "live" ? "run" : "throw", face: ball.x >= st.x ? 1 : -1,
         });
 
-        // ball
-        const bs = ball.flying ? clamp(1 - (H - 118 - ball.y) / 620, 0.55, 1) : 1;
-        Art.ball(ctx, ball.x, ball.y, 13 * bs, "soccer", "#ffffff");
+        Art.shadow(ctx, ball.x, Math.max(ball.y + 6, LINE + 4), 12, 0.18);
+        Art.ball(ctx, ball.x, ball.y, 13, "soccer", "#ffffff");
 
-        // hud
         text(ctx, `${Eng.PLAYERS[0].name}  ${scores[0]}`, 30, 32, { align: "left", font: "800 22px system-ui", color: Eng.PLAYERS[0].color });
         text(ctx, `${scores[1]}  ${BOT ? "CPU" : Eng.PLAYERS[1].name}`, W - 30, 32, { align: "right", font: "800 22px system-ui", color: Eng.PLAYERS[1].color });
         text(ctx, `Kick ${Math.min(round + 1, ROUNDS)} / ${ROUNDS}`, W / 2, 32, { font: "700 17px system-ui", color: "#cfe0ff" });
-        text(ctx, `${sB.name} shooting  ·  ${kB.name} in goal`, W / 2, H - 24, { font: "700 16px system-ui", color: "#9fb0e0" });
+        text(ctx, `${sB.name} striking  ·  ${kB.name} keeping`, W / 2, H - 16, { font: "700 15px system-ui", color: "#bcd8c4" });
 
         if (msg && msgT > 0)
-          text(ctx, msg, W / 2, H / 2 + 26, { font: "900 54px system-ui", color: "#fff", glow: msg === "GOAL!" ? "#4dff9e" : "#ffd24d" });
+          text(ctx, msg, W / 2, H / 2 - 20, { font: "900 56px system-ui", color: "#fff", glow: msg === "GOAL!" ? "#4dff9e" : "#ffd24d" });
 
         if (matchOver) results.render(ctx, W, H);
       }

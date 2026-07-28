@@ -192,6 +192,12 @@
   Eng.isEquipped = (it) => { const eq = Eng.SHOP.equipped[it.game]; return eq ? eq === it.id : !!it.default; };
   Eng.buyItem = (it) => { if (Eng.isOwned(it)) return true; if (!Eng.spendCoins(it.price)) return false; Eng.SHOP.owned[it.id] = true; Eng.shopSave(); return true; };
   Eng.equipItem = (it) => { Eng.SHOP.equipped[it.game] = it.id; Eng.shopSave(); };
+  Eng.equippedItem = (game) => {
+    const items = window.SHOP_ITEMS || [];
+    const eq = Eng.SHOP.equipped[game];
+    return (eq ? items.find((i) => i.id === eq) : null) ||
+           items.find((i) => i.game === game && i.default) || null;
+  };
   Eng.skinColor = (game, fallback) => {
     const items = window.SHOP_ITEMS || [];
     const eq = Eng.SHOP.equipped[game];

@@ -170,30 +170,156 @@
   function buildShop() {
     const grid = document.getElementById("shopGrid");
     grid.innerHTML = "";
-    GAMES.forEach((g) => {
-      const list = (window.SHOP_ITEMS || []).filter((it) => it.game === g.id);
+    const section = (title, color, iconHTML, list) => {
       if (!list.length) return;
       const h = document.createElement("h3");
-      h.className = "shopcat"; h.style.setProperty("--c", g.color);
-      h.innerHTML = `<span class="catico">${ICONS[g.id] || g.icon}</span> ${g.name}`;
+      h.className = "shopcat"; h.style.setProperty("--c", color);
+      h.innerHTML = `<span class="catico">${iconHTML}</span> ${title}`;
       grid.appendChild(h);
       list.forEach((it) => grid.appendChild(itemCard(it)));
-    });
+    };
+    const ITEMS = window.SHOP_ITEMS || [];
+    // stickman customisation first — it applies everywhere
+    section("Stickman — Hats", "#ffd24d",
+      `<svg viewBox="0 0 48 48" fill="currentColor"><ellipse cx="24" cy="32" rx="20" ry="5"/><path d="M13 30 q1-18 11-18 t11 18 z"/></svg>`,
+      ITEMS.filter((i) => i.game === "hat"));
+    section("Stickman — Shirts", "#4dff9e",
+      `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><circle cx="24" cy="11" r="6" fill="currentColor"/><path d="M24 18 v14 M24 32 l-8 12 M24 32 l8 12 M12 24 l12 3 l12-3"/></svg>`,
+      ITEMS.filter((i) => i.game === "body"));
+    GAMES.forEach((g) =>
+      section(g.name, g.color, ICONS[g.id] || g.icon, ITEMS.filter((it) => it.game === g.id)));
   }
+
   function itemCard(it) {
     const card = document.createElement("div");
-    card.className = "shopitem"; card.style.setProperty("--c", it.color);
+    card.className = "shopitem"; card.style.setProperty("--c", it.color || "#8fa4d6");
     const owned = Eng.isOwned(it), eq = Eng.isEquipped(it);
-    card.innerHTML = `<span class="swatch"></span><span class="iname">${it.name}</span>
-      <button class="buybtn ${eq ? "eq" : owned ? "own" : ""}">${eq ? "Equipped" : owned ? "Equip" : "Buy 🪙" + it.price}</button>`;
-    const b = card.querySelector("button");
+    const cv = document.createElement("canvas");
+    cv.className = "preview"; cv.width = 200; cv.height = 120;
+    drawPreview(cv.getContext("2d"), it);
+    card.appendChild(cv);
+    const nm = document.createElement("span");
+    nm.className = "iname"; nm.textContent = it.name;
+    card.appendChild(nm);
+    const b = document.createElement("button");
+    b.className = "buybtn " + (eq ? "eq" : owned ? "own" : "");
+    b.textContent = eq ? "✓ Equipped" : owned ? "Equip" : "Buy 🪙" + it.price;
     b.onclick = () => {
       if (Eng.isEquipped(it)) return;
       if (Eng.isOwned(it)) Eng.equipItem(it);
       else if (!Eng.buyItem(it)) { b.textContent = "Need more 🪙"; b.classList.add("nope"); return; }
       buildShop(); refreshCoins();
     };
+    card.appendChild(b);
     return card;
+  }
+
+  /* Draw the actual item so you see what you're buying. */
+  function drawPreview(c, it) {
+    const W2 = 200, H2 = 120, cx = W2 / 2, cy = H2 / 2;
+    c.fillStyle = "#0b1020"; c.fillRect(0, 0, W2, H2);
+    // faint tech-board grid behind every preview
+    c.strokeStyle = "rgba(255,255,255,0.05)"; c.lineWidth = 1;
+    for (let x = 0; x < W2; x += 16) { c.beginPath(); c.moveTo(x, 0); c.lineTo(x, H2); c.stroke(); }
+    for (let y = 0; y < H2; y += 16) { c.beginPath(); c.moveTo(0, y); c.lineTo(W2, y); c.stroke(); }
+    const col = it.color || "#8fa4d6";
+
+    switch (it.kind) {
+      case "cube": {
+        c.save(); c.translate(cx, cy); c.rotate(-0.22);
+        c.shadowColor = col; c.shadowBlur = 22;
+        const g = c.createLinearGradient(-30, -30, 30, 30);
+        g.addColorStop(0, "#fff"); g.addColorStop(1, col);
+        c.fillStyle = g; Eng.roundRect(c, -30, -30, 60, 60, 9); c.fill();
+        c.shadowBlur = 0; c.fillStyle = "#16244a";
+        c.beginPath(); c.arc(-9, -4, 4.5, 0, 7); c.arc(9, -4, 4.5, 0, 7); c.fill();
+        c.lineWidth = 3; c.strokeStyle = "#16244a"; c.lineCap = "round";
+        c.beginPath(); c.arc(0, 2, 10, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+        c.restore(); break;
+      }
+      case "ball": Art.ball(c, cx, cy, 26, "plain", col); break;
+      case "basketball": Art.ball(c, cx, cy, 28, "basket", col); break;
+      case "volleyball": Art.ball(c, cx, cy, 28, "volley", col); break;
+      case "soccerball": Art.ball(c, cx, cy, 28, "soccer", col); break;
+      case "bowlball": Art.ball(c, cx, cy, 30, "bowl", col); break;
+      case "puck":
+        c.fillStyle = col; c.strokeStyle = Art.OUT; c.lineWidth = 3;
+        c.beginPath(); c.ellipse(cx, cy + 6, 34, 13, 0, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = "rgba(255,255,255,0.25)";
+        c.beginPath(); c.ellipse(cx, cy - 2, 34, 13, 0, 0, 7); c.fill();
+        c.strokeStyle = Art.OUT; c.stroke(); break;
+      case "pellet":
+        c.fillStyle = col; c.shadowColor = col; c.shadowBlur = 20;
+        c.beginPath(); c.arc(cx, cy, 17, 0, 7); c.fill(); c.shadowBlur = 0; break;
+      case "shell":
+        c.fillStyle = col; c.shadowColor = col; c.shadowBlur = 18;
+        c.beginPath(); c.arc(cx + 10, cy, 9, 0, 7); c.fill();
+        c.shadowBlur = 0; c.globalAlpha = 0.5;
+        c.beginPath(); c.moveTo(cx - 34, cy); c.lineTo(cx + 4, cy - 6); c.lineTo(cx + 4, cy + 6); c.fill();
+        c.globalAlpha = 1; break;
+      case "trail":
+        c.strokeStyle = col; c.lineWidth = 12; c.lineCap = "round"; c.lineJoin = "round";
+        c.shadowColor = col; c.shadowBlur = 18;
+        c.beginPath(); c.moveTo(28, 90); c.lineTo(28, 52); c.lineTo(96, 52); c.lineTo(96, 78); c.lineTo(164, 78); c.stroke();
+        c.shadowBlur = 0; c.fillStyle = "#fff";
+        c.beginPath(); c.arc(164, 78, 8, 0, 7); c.fill(); break;
+      case "blade": {
+        c.save(); c.translate(cx, cy); c.rotate(-0.7);
+        if (it.extra === "fire") { c.shadowColor = "#ff7a3a"; c.shadowBlur = 26; }
+        if (it.extra === "ice") { c.shadowColor = "#7ce8ff"; c.shadowBlur = 24; }
+        if (it.extra === "venom") { c.shadowColor = "#7dff4d"; c.shadowBlur = 24; }
+        if (it.extra === "shadow") { c.shadowColor = "#b46bff"; c.shadowBlur = 26; }
+        const bg = c.createLinearGradient(0, -44, 0, 26);
+        bg.addColorStop(0, "#ffffff"); bg.addColorStop(1, col);
+        c.fillStyle = bg; c.strokeStyle = Art.OUT; c.lineWidth = 2.5;
+        c.beginPath();
+        c.moveTo(0, -46); c.lineTo(7, -30); c.lineTo(7, 20); c.lineTo(-7, 20); c.lineTo(-7, -30);
+        c.closePath(); c.fill(); c.stroke();
+        c.shadowBlur = 0;
+        c.fillStyle = "#8a6234";
+        c.beginPath(); c.rect(-16, 20, 32, 7); c.fill(); c.stroke();
+        c.beginPath(); c.rect(-5, 27, 10, 20); c.fill(); c.stroke();
+        c.restore(); break;
+      }
+      case "ring":
+        c.strokeStyle = col; c.lineWidth = 9; c.shadowColor = col; c.shadowBlur = 22;
+        c.beginPath(); c.arc(cx, cy, 40, 0, 7); c.stroke(); c.shadowBlur = 0;
+        c.strokeStyle = "rgba(255,255,255,0.18)"; c.lineWidth = 2;
+        c.beginPath(); c.arc(cx, cy, 26, 0, 7); c.stroke(); break;
+      case "board":
+        c.strokeStyle = col; c.lineWidth = 7; c.lineCap = "round";
+        [-18, 18].forEach((o) => {
+          c.beginPath(); c.moveTo(cx + o, cy - 38); c.lineTo(cx + o, cy + 38); c.stroke();
+          c.beginPath(); c.moveTo(cx - 38, cy + o); c.lineTo(cx + 38, cy + o); c.stroke();
+        }); break;
+      case "cardback":
+        c.fillStyle = col; c.strokeStyle = "rgba(255,255,255,0.3)"; c.lineWidth = 2;
+        Eng.roundRect(c, cx - 30, cy - 40, 60, 80, 9); c.fill(); c.stroke();
+        c.strokeStyle = "rgba(255,255,255,0.22)"; c.lineWidth = 3;
+        for (let k = -2; k <= 2; k++) { c.beginPath(); c.moveTo(cx - 20, cy + k * 13); c.lineTo(cx + 20, cy + k * 13); c.stroke(); }
+        break;
+      case "track":
+      case "scene": {
+        const g2 = c.createLinearGradient(0, 0, 0, H2);
+        g2.addColorStop(0, col); g2.addColorStop(1, "#0a0d16");
+        c.fillStyle = g2; c.fillRect(0, 0, W2, H2);
+        Art.stickman(c, cx, H2 - 22, { color: "#e8ecff", scale: 0.9, pose: "run", t: 1.2 });
+        break;
+      }
+      case "chicken":
+        Art.chicken(c, cx - 6, cy + 30, 1.5, col, 0.4, 1); break;
+      case "stickman": {
+        const isHat = it.game === "hat";
+        Art.stickman(c, cx, H2 - 16, {
+          noStyle: true, color: "#8fa4d6", scale: 1.35, pose: "idle", t: 0,
+          hat: isHat ? it.extra : "", hatColor: isHat ? it.color : undefined,
+          shirt: isHat ? null : it.color,
+        });
+        break;
+      }
+      default:
+        c.fillStyle = col; Eng.roundRect(c, cx - 40, cy - 24, 80, 48, 10); c.fill();
+    }
   }
 
   // ---------- launch / loop ----------

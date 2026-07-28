@@ -31,9 +31,19 @@
           const pen = { x: penPos[i].x, y: penPos[i].y, w: PENW, h: PENH };
           return { b, pen, x: pen.x + PENW / 2, y: pen.y + PENH / 2, carried: [], count: 0 };
         });
+        // start penned up in a neat ring in the middle of the yard
         chickens = [];
-        for (let i = 0; i < 14; i++)
-          chickens.push({ x: rand(W * 0.3, W * 0.7), y: rand(H * 0.3, H * 0.7), dir: rand(0, 7), wt: rand(0.4, 1.4), state: "loose" });
+        const FLOCK = 14;
+        for (let i = 0; i < FLOCK; i++) {
+          const a = (i / FLOCK) * Math.PI * 2;
+          const ring = i % 2 ? 96 : 58;
+          chickens.push({
+            x: W / 2 + Math.cos(a) * ring, y: H / 2 + Math.sin(a) * ring * 0.75,
+            hx: W / 2 + Math.cos(a) * ring, hy: H / 2 + Math.sin(a) * ring * 0.75,
+            orbit: a, spin: Math.random() < 0.5 ? 1 : -1, radius: rand(16, 34),
+            panic: 0, face: 1, state: "loose",
+          });
+        }
         timeLeft = GAME_TIME; phase = "count"; count = 3.2; matchOver = false;
       }
       reset();
@@ -75,15 +85,31 @@
           }
         }
 
-        // loose chickens wander + flee + get caught
+        // loose chickens: pecking in lazy circles until someone gets close
         for (const ch of chickens) {
           if (ch.state !== "loose") continue;
-          ch.wt -= dt;
-          if (ch.wt <= 0) { ch.dir = rand(0, 7); ch.wt = rand(0.4, 1.3); }
-          let vx = Math.cos(ch.dir) * 70, vy = Math.sin(ch.dir) * 70;
-          let near = null, nd = 86;
+
+          let near = null, nd = 108;
           for (const p of players) { const d = dist(p.x, p.y, ch.x, ch.y); if (d < nd) { nd = d; near = p; } }
-          if (near) { const a = Math.atan2(ch.y - near.y, ch.x - near.x); vx = Math.cos(a) * 165; vy = Math.sin(a) * 165; }
+
+          let vx, vy;
+          if (near) {
+            ch.panic = 1.1;                                   // spooked
+            const a = Math.atan2(ch.y - near.y, ch.x - near.x);
+            vx = Math.cos(a) * 150; vy = Math.sin(a) * 150;
+            ch.hx = ch.x; ch.hy = ch.y;                        // new home where it stops
+          } else if (ch.panic > 0) {
+            ch.panic -= dt;                                    // still jogging it off
+            vx = Math.cos(ch.orbit) * 90; vy = Math.sin(ch.orbit) * 90;
+            ch.orbit += ch.spin * 2.4 * dt;
+          } else {
+            // settle into a slow circle around its home patch
+            ch.orbit += ch.spin * 1.15 * dt;
+            const tx = ch.hx + Math.cos(ch.orbit) * ch.radius;
+            const ty = ch.hy + Math.sin(ch.orbit) * ch.radius * 0.7;
+            vx = (tx - ch.x) * 3.2; vy = (ty - ch.y) * 3.2;
+          }
+
           if (Math.abs(vx) > 8) ch.face = vx > 0 ? 1 : -1;
           ch.x = clamp(ch.x + vx * dt, AX0, AX1); ch.y = clamp(ch.y + vy * dt, AY0, AY1);
           for (const p of players) {
@@ -105,12 +131,29 @@
         // fence border
         ctx.strokeStyle = "#caa15a"; ctx.lineWidth = 6; ctx.strokeRect(M, M, W - 2 * M, H - 2 * M);
 
-        // pens
+        // pens — dirt floor with a post-and-rail fence
         for (const p of players) {
-          ctx.fillStyle = p.b.color + "22"; ctx.fillRect(p.pen.x, p.pen.y, p.pen.w, p.pen.h);
-          ctx.strokeStyle = p.b.color; ctx.lineWidth = 4; ctx.setLineDash([10, 8]);
-          ctx.strokeRect(p.pen.x, p.pen.y, p.pen.w, p.pen.h); ctx.setLineDash([]);
-          text(ctx, `${p.b.name}: ${p.count}`, p.pen.x + p.pen.w / 2, p.pen.y - 12, { font: "800 16px system-ui", color: p.b.color });
+          const { x, y, w, h } = p.pen;
+          ctx.fillStyle = "#6b4a2a"; ctx.fillRect(x, y, w, h);
+          ctx.fillStyle = "rgba(0,0,0,0.16)";
+          for (let sy = y; sy < y + h; sy += 12) ctx.fillRect(x, sy, w, 5);
+          ctx.fillStyle = p.b.color + "33"; ctx.fillRect(x, y, w, h);
+          // rails
+          ctx.strokeStyle = "#c99a52"; ctx.lineWidth = 5; ctx.lineCap = "round";
+          [0.3, 0.68].forEach((f) => {
+            ctx.beginPath();
+            ctx.moveTo(x, y + h * f); ctx.lineTo(x + w, y + h * f);
+            ctx.moveTo(x + w * f, y); ctx.lineTo(x + w * f, y + h);
+            ctx.stroke();
+          });
+          ctx.strokeStyle = p.b.color; ctx.lineWidth = 5;
+          ctx.strokeRect(x, y, w, h);
+          // corner posts
+          ctx.fillStyle = "#8a6234"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 2.5;
+          [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].forEach(([px, py]) => {
+            ctx.beginPath(); ctx.rect(px - 5, py - 9, 10, 18); ctx.fill(); ctx.stroke();
+          });
+          text(ctx, `${p.b.name}: ${p.count}`, x + w / 2, y - 14, { font: "800 16px system-ui", color: p.b.color });
         }
         // penned chickens
         for (const ch of chickens) if (ch.state === "penned") drawChicken(ctx, ch, 0.72);
@@ -124,7 +167,7 @@
           Art.stickman(ctx, p.x, feet, {
             color: p.b.color, scale: 0.95, t: time,
             pose: p.moving ? "run" : (p.carried.length ? "carry" : "idle"),
-            face: p.face || 1, hat: "straw",
+            face: p.face || 1, hat: "cowboy", hatColor: "#6b4a2a",
           });
         }
 

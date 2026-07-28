@@ -39,12 +39,15 @@
 
       function move(p, lo, hi, dt) {
         p.vx = 0;
-        if (input.down(p.b.left)) p.vx = -300;
-        if (input.down(p.b.right)) p.vx = 300;
+        if (input.down(p.b.left)) p.vx = -340;
+        if (input.down(p.b.right)) p.vx = 340;
+        // walking is the main way to move; jumping is for headers
         p.x = clamp(p.x + p.vx * dt, lo, hi);
-        if (input.down(p.b.up) && p.onGround) { p.vy = -620; p.onGround = false; }
+        if (input.down(p.b.up) && p.onGround) { p.vy = -640; p.onGround = false; }
+        if (input.down(p.b.down) && !p.onGround) p.vy += GRAV * 0.9 * dt;  // fast drop
         p.vy += GRAV * dt; p.y += p.vy * dt;
         if (p.y >= FLOOR) { p.y = FLOOR; p.vy = 0; p.onGround = true; }
+        p.walkT = (p.walkT || 0) + Math.abs(p.vx) * dt * 0.03;
       }
       function kick(p) {
         const cy = p.y - PRAD;
@@ -115,7 +118,7 @@
         const figure = (p, face) => {
           Art.shadow(ctx, p.x, FLOOR + 2, 19, 0.25);
           Art.stickman(ctx, p.x, p.y, {
-            color: p.b.color, scale: 1.12, t: time,
+            color: p.b.color, scale: 1.12, t: p.vx ? p.walkT || 0 : time,
             pose: !p.onGround ? "jump" : (p.vx ? "run" : "idle"), face,
           });
         };

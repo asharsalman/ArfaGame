@@ -22,12 +22,12 @@
       const OX = (W - GW) / 2, OY = (H - GH) / 2 + 22;
       const backCol = Eng.skinColor("memory", "#46406e");
       const FACES = [
-        { c: "#ff5b5b", s: "circle" }, { c: "#4df0ff", s: "square" },
-        { c: "#7dff4d", s: "triangle" }, { c: "#ffd24d", s: "diamond" },
-        { c: "#b46bff", s: "star" }, { c: "#ff8a3a", s: "heart" },
-        { c: "#4dff9e", s: "circle" }, { c: "#ff6ad5", s: "square" },
-        { c: "#5b8aff", s: "triangle" }, { c: "#f4f7ff", s: "diamond" },
-        { c: "#ffa8c8", s: "star" }, { c: "#9ad14d", s: "heart" },
+        { c: "#ffd24d", s: "duck" },   { c: "#4df0ff", s: "fish" },
+        { c: "#ff8a3a", s: "cat" },    { c: "#b46bff", s: "star" },
+        { c: "#ff5b8a", s: "flower" }, { c: "#7dff4d", s: "frog" },
+        { c: "#f4f7ff", s: "chick" },  { c: "#5b8aff", s: "whale" },
+        { c: "#ff5b5b", s: "apple" },  { c: "#4dff9e", s: "leaf" },
+        { c: "#ffa8c8", s: "heart" },  { c: "#c9954f", s: "bone" },
       ];
       let cards, players, turn, flipped, lockT, matchOver;
       const results = Eng.Results();
@@ -87,29 +87,102 @@
         }
       }
 
+      // little cartoon pictures — ducks, animals, flowers, stars…
       function symbol(ctx, f, cx, cy, r) {
-        ctx.fillStyle = f.c; ctx.shadowColor = f.c; ctx.shadowBlur = 12;
-        ctx.beginPath();
+        const c = f.c, O = Art.OUT;
+        ctx.save();
+        ctx.strokeStyle = O; ctx.lineWidth = 2.5; ctx.lineJoin = "round";
+        const blob = (x, y, rx, ry, fill) => {
+          ctx.fillStyle = fill; ctx.beginPath();
+          ctx.ellipse(x, y, rx, ry, 0, 0, 7); ctx.fill(); ctx.stroke();
+        };
+        const eye = (x, y, s) => { ctx.fillStyle = O; ctx.beginPath(); ctx.arc(x, y, s || 2.4, 0, 7); ctx.fill(); };
+        const poly = (pts, fill) => {
+          ctx.fillStyle = fill; ctx.beginPath();
+          pts.forEach((p, i) => ctx[i ? "lineTo" : "moveTo"](cx + p[0], cy + p[1]));
+          ctx.closePath(); ctx.fill(); ctx.stroke();
+        };
+
         switch (f.s) {
-          case "circle": ctx.arc(cx, cy, r, 0, 7); break;
-          case "square": ctx.rect(cx - r * 0.85, cy - r * 0.85, r * 1.7, r * 1.7); break;
-          case "triangle":
-            ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy + r * 0.8); ctx.lineTo(cx - r, cy + r * 0.8); break;
-          case "diamond":
-            ctx.moveTo(cx, cy - r); ctx.lineTo(cx + r, cy); ctx.lineTo(cx, cy + r); ctx.lineTo(cx - r, cy); break;
-          case "star":
-            for (let k = 0; k < 10; k++) {
-              const a = (k / 10) * Math.PI * 2 - Math.PI / 2, rr = k % 2 ? r * 0.45 : r;
-              ctx[k ? "lineTo" : "moveTo"](cx + Math.cos(a) * rr, cy + Math.sin(a) * rr);
+          case "duck":
+            blob(cx - 2, cy + 6, r * 0.8, r * 0.62, c);
+            blob(cx + r * 0.42, cy - r * 0.4, r * 0.36, r * 0.36, c);
+            poly([[r * 0.72, -r * 0.42], [r * 1.15, -r * 0.28], [r * 0.72, -r * 0.16]], "#f0a52e");
+            eye(cx + r * 0.5, cy - r * 0.48); break;
+          case "chick":
+            blob(cx, cy + 4, r * 0.72, r * 0.66, c);
+            blob(cx, cy - r * 0.5, r * 0.46, r * 0.42, c);
+            poly([[r * 0.42, -r * 0.5], [r * 0.78, -r * 0.4], [r * 0.42, -r * 0.3]], "#f0a52e");
+            eye(cx + r * 0.16, cy - r * 0.58); eye(cx - r * 0.16, cy - r * 0.58); break;
+          case "fish":
+            blob(cx - 2, cy, r * 0.78, r * 0.5, c);
+            poly([[-r * 0.72, 0], [-r * 1.2, -r * 0.42], [-r * 1.2, r * 0.42]], c);
+            eye(cx + r * 0.34, cy - r * 0.1); break;
+          case "whale":
+            blob(cx - 2, cy + 4, r * 0.82, r * 0.52, c);
+            poly([[-r * 0.78, 4], [-r * 1.2, -r * 0.3], [-r * 1.15, r * 0.4]], c);
+            ctx.strokeStyle = c; ctx.lineWidth = 3;
+            ctx.beginPath(); ctx.moveTo(cx + r * 0.3, cy - r * 0.5);
+            ctx.quadraticCurveTo(cx + r * 0.5, cy - r, cx + r * 0.7, cy - r * 0.62); ctx.stroke();
+            ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+            eye(cx + r * 0.42, cy); break;
+          case "cat":
+            poly([[-r * 0.6, -r * 0.3], [-r * 0.52, -r], [-r * 0.1, -r * 0.52]], c);
+            poly([[r * 0.6, -r * 0.3], [r * 0.52, -r], [r * 0.1, -r * 0.52]], c);
+            blob(cx, cy, r * 0.76, r * 0.68, c);
+            eye(cx - r * 0.28, cy - r * 0.1); eye(cx + r * 0.28, cy - r * 0.1);
+            ctx.strokeStyle = O; ctx.lineWidth = 2;
+            ctx.beginPath(); ctx.moveTo(cx - r * 0.75, cy + r * 0.16); ctx.lineTo(cx - r * 0.3, cy + r * 0.24);
+            ctx.moveTo(cx + r * 0.75, cy + r * 0.16); ctx.lineTo(cx + r * 0.3, cy + r * 0.24); ctx.stroke(); break;
+          case "frog":
+            blob(cx, cy + 6, r * 0.82, r * 0.58, c);
+            blob(cx - r * 0.34, cy - r * 0.36, r * 0.3, r * 0.3, c);
+            blob(cx + r * 0.34, cy - r * 0.36, r * 0.3, r * 0.3, c);
+            eye(cx - r * 0.34, cy - r * 0.36); eye(cx + r * 0.34, cy - r * 0.36);
+            ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+            ctx.beginPath(); ctx.arc(cx, cy + r * 0.12, r * 0.34, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke(); break;
+          case "flower":
+            for (let k = 0; k < 6; k++) {
+              const a = (k / 6) * Math.PI * 2;
+              blob(cx + Math.cos(a) * r * 0.52, cy + Math.sin(a) * r * 0.52, r * 0.32, r * 0.32, c);
             }
-            break;
+            blob(cx, cy, r * 0.3, r * 0.3, "#ffd24d"); break;
+          case "leaf":
+            ctx.fillStyle = c; ctx.beginPath();
+            ctx.moveTo(cx - r * 0.7, cy + r * 0.6);
+            ctx.quadraticCurveTo(cx - r * 0.7, cy - r * 0.8, cx + r * 0.7, cy - r * 0.6);
+            ctx.quadraticCurveTo(cx + r * 0.4, cy + r * 0.75, cx - r * 0.7, cy + r * 0.6);
+            ctx.fill(); ctx.stroke();
+            ctx.beginPath(); ctx.moveTo(cx - r * 0.6, cy + r * 0.5); ctx.lineTo(cx + r * 0.5, cy - r * 0.45); ctx.stroke(); break;
+          case "apple":
+            blob(cx, cy + r * 0.1, r * 0.72, r * 0.72, c);
+            ctx.strokeStyle = "#6b4a2a"; ctx.lineWidth = 3.5;
+            ctx.beginPath(); ctx.moveTo(cx, cy - r * 0.6); ctx.lineTo(cx + r * 0.1, cy - r); ctx.stroke();
+            ctx.strokeStyle = O; ctx.lineWidth = 2.5;
+            poly([[r * 0.12, -r * 0.95], [r * 0.7, -r * 1.05], [r * 0.3, -r * 0.6]], "#4dff9e"); break;
+          case "bone":
+            blob(cx - r * 0.6, cy - r * 0.34, r * 0.3, r * 0.3, c);
+            blob(cx - r * 0.6, cy + r * 0.24, r * 0.3, r * 0.3, c);
+            blob(cx + r * 0.6, cy - r * 0.34, r * 0.3, r * 0.3, c);
+            blob(cx + r * 0.6, cy + r * 0.24, r * 0.3, r * 0.3, c);
+            ctx.fillStyle = c; ctx.beginPath();
+            ctx.rect(cx - r * 0.62, cy - r * 0.22, r * 1.24, r * 0.42); ctx.fill(); break;
+          case "star": {
+            const pts = [];
+            for (let k = 0; k < 10; k++) {
+              const a = (k / 10) * Math.PI * 2 - Math.PI / 2, rr = k % 2 ? r * 0.44 : r * 0.96;
+              pts.push([Math.cos(a) * rr, Math.sin(a) * rr]);
+            }
+            poly(pts, c); break;
+          }
           case "heart":
-            ctx.moveTo(cx, cy + r * 0.8);
-            ctx.bezierCurveTo(cx - r * 1.5, cy - r * 0.4, cx - r * 0.4, cy - r * 1.2, cx, cy - r * 0.35);
-            ctx.bezierCurveTo(cx + r * 0.4, cy - r * 1.2, cx + r * 1.5, cy - r * 0.4, cx, cy + r * 0.8);
-            break;
+            ctx.fillStyle = c; ctx.beginPath();
+            ctx.moveTo(cx, cy + r * 0.78);
+            ctx.bezierCurveTo(cx - r * 1.4, cy - r * 0.36, cx - r * 0.36, cy - r * 1.1, cx, cy - r * 0.3);
+            ctx.bezierCurveTo(cx + r * 0.36, cy - r * 1.1, cx + r * 1.4, cy - r * 0.36, cx, cy + r * 0.78);
+            ctx.fill(); ctx.stroke(); break;
         }
-        ctx.closePath(); ctx.fill(); ctx.shadowBlur = 0;
+        ctx.restore();
       }
 
       function render(ctx) {
