@@ -1,0 +1,215 @@
+/* art.js — shared cartoon art kit (original artwork).
+   Every mini-game draws its characters through here so the whole arcade reads
+   as one game: chunky stickmen, thick dark outlines, flat bright colors. */
+(function () {
+  const A = {};
+  const OUT = "#0d1020";                       // outline color
+
+  // ---- low level: an outlined thick line ----
+  function limb(ctx, x1, y1, x2, y2, w, c) {
+    ctx.lineCap = "round";
+    ctx.strokeStyle = OUT; ctx.lineWidth = w + 5;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+    ctx.strokeStyle = c; ctx.lineWidth = w;
+    ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
+  }
+  A.limb = limb;
+
+  A.shadow = function (ctx, x, y, rx, alpha) {
+    ctx.fillStyle = `rgba(0,0,0,${alpha == null ? 0.28 : alpha})`;
+    ctx.beginPath(); ctx.ellipse(x, y, rx, rx * 0.34, 0, 0, 7); ctx.fill();
+  };
+
+  // ---- poses: limb endpoints as offsets from the joint ----
+  function P(a1, a2, l1, l2, lean, bob) {
+    return { a1, a2, l1, l2, lean: lean || 0, bob: bob || 0 };
+  }
+  A.pose = function (name, t, f) {
+    t = t || 0; f = f === -1 ? -1 : 1;
+    switch (name) {
+      case "run": {
+        const sw = Math.sin(t * 13);
+        return P([f * 13, 4 + sw * 9], [f * -9, 4 - sw * 9],
+                 [f * 9 + sw * 13, 21], [f * -7 - sw * 13, 21], f * 0.13, Math.abs(sw) * 2);
+      }
+      case "walk": {
+        const sw = Math.sin(t * 7);
+        return P([f * 11, 7 + sw * 5], [f * -10, 7 - sw * 5],
+                 [f * 7 + sw * 9, 22], [f * -7 - sw * 9, 22], 0, 0);
+      }
+      case "jump":  return P([f * 12, -16], [f * -12, -16], [f * 11, 17], [f * -9, 21], 0, 0);
+      case "shoot": return P([f * 9, -21], [f * -6, -19], [f * 9, 22], [f * -9, 22], 0, 0);
+      case "throw": return P([f * 22, -12], [f * -10, 2], [f * 11, 22], [f * -10, 22], f * 0.14, 0);
+      case "dive":  return P([f * 25, -10], [f * 19, 3], [f * -17, 11], [f * -13, 19], f * 0.95, 0);
+      case "swing": return P([f * 24, -6], [f * -9, 4], [f * 12, 22], [f * -10, 22], f * 0.15, 0);
+      case "carry": return P([f * 13, -3], [f * -13, -3], [f * 8, 22], [f * -8, 22], 0, 0);
+      case "cheer": return P([f * 14, -23], [f * -14, -23], [f * 9, 22], [f * -9, 22], 0, 0);
+      case "guard": return P([f * 20, -14], [f * -20, -14], [f * 14, 22], [f * -14, 22], 0, 0);
+      case "ready": return P([f * 15, -2], [f * -13, 2], [f * 11, 22], [f * -11, 22], 0, 0);
+      default:      return P([f * 11, 8], [f * -11, 8], [f * 8, 22], [f * -8, 22], 0, 0);
+    }
+  };
+
+  /* Draw a stickman standing with its FEET at (x, y).
+     opts: { color, scale, pose, face:1|-1, t, hat, hatColor, glow } */
+  A.stickman = function (ctx, x, y, opts) {
+    const o = opts || {};
+    const s = o.scale || 1, c = o.color || "#fff";
+    const f = o.face === -1 ? -1 : 1;
+    const p = A.pose(o.pose, o.t, f);
+
+    ctx.save();
+    ctx.translate(x, y - p.bob * s);
+    ctx.scale(s, s);
+    if (p.lean) ctx.rotate(p.lean);
+    if (o.glow) { ctx.shadowColor = c; ctx.shadowBlur = 16; }
+
+    const HIP = -22, SHO = -40, HEAD = -52, R = 9;
+    // legs then arms then body then head (head on top)
+    limb(ctx, 0, HIP, p.l1[0], HIP + p.l1[1], 7, c);
+    limb(ctx, 0, HIP, p.l2[0], HIP + p.l2[1], 7, c);
+    limb(ctx, 0, SHO, p.a1[0], SHO + p.a1[1], 6, c);
+    limb(ctx, 0, SHO, p.a2[0], SHO + p.a2[1], 6, c);
+    limb(ctx, 0, SHO - 2, 0, HIP, 9, c);
+
+    ctx.strokeStyle = OUT; ctx.lineWidth = 4;
+    ctx.fillStyle = c;
+    ctx.beginPath(); ctx.arc(0, HEAD, R, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.shadowBlur = 0;
+    // eyes
+    ctx.fillStyle = OUT;
+    ctx.beginPath();
+    ctx.arc(f * 2.6 - 2.4, HEAD - 1.5, 1.9, 0, 7);
+    ctx.arc(f * 2.6 + 2.4, HEAD - 1.5, 1.9, 0, 7);
+    ctx.fill();
+
+    if (o.hat === "cap") {
+      ctx.fillStyle = o.hatColor || "#e8503a"; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, HEAD - 3, R + 1, Math.PI, 0); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(f * 1, HEAD - 3); ctx.lineTo(f * (R + 11), HEAD - 3);
+      ctx.lineTo(f * (R + 9), HEAD + 1); ctx.lineTo(f * 1, HEAD + 1); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+    } else if (o.hat === "straw") {
+      ctx.fillStyle = o.hatColor || "#e8b24a"; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(0, HEAD - 5, R + 9, 4.4, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.ellipse(0, HEAD - 9, R - 2, 5.4, 0, 0, 7); ctx.fill(); ctx.stroke();
+    } else if (o.hat === "cowboy") {
+      ctx.fillStyle = o.hatColor || "#4a3a2a"; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(0, HEAD - 5, R + 11, 4.6, 0, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(-R + 2, HEAD - 6); ctx.quadraticCurveTo(0, HEAD - 20, R - 2, HEAD - 6);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    }
+    ctx.restore();
+  };
+
+  /* Hands position for a given pose, in world coords — so games can put a ball
+     or a racket exactly where the character is holding it. */
+  A.handPos = function (x, y, opts) {
+    const o = opts || {}, s = o.scale || 1, f = o.face === -1 ? -1 : 1;
+    const p = A.pose(o.pose, o.t, f), SHO = -40;
+    return { x: x + p.a1[0] * s, y: y + (SHO + p.a1[1]) * s - p.bob * s };
+  };
+
+  // ---- cartoon balls ----
+  A.ball = function (ctx, x, y, r, kind, color) {
+    ctx.save();
+    ctx.fillStyle = color || "#fff";
+    ctx.strokeStyle = OUT; ctx.lineWidth = Math.max(2, r * 0.16);
+    ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.lineWidth = Math.max(1.5, r * 0.12);
+    ctx.beginPath();
+    if (kind === "basket") {
+      ctx.moveTo(x - r, y); ctx.lineTo(x + r, y);
+      ctx.moveTo(x, y - r); ctx.lineTo(x, y + r);
+      ctx.stroke();
+      ctx.beginPath(); ctx.arc(x - r * 1.35, y, r * 1.2, -0.85, 0.85); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x + r * 1.35, y, r * 1.2, Math.PI - 0.85, Math.PI + 0.85); ctx.stroke();
+    } else if (kind === "volley") {
+      ctx.lineWidth = Math.max(1.4, r * 0.1);
+      ctx.moveTo(x - r * 0.95, y - r * 0.3);
+      ctx.quadraticCurveTo(x, y - r * 0.1, x + r * 0.95, y - r * 0.3);
+      ctx.moveTo(x - r * 0.6, y + r * 0.78);
+      ctx.quadraticCurveTo(x - r * 0.15, y - r * 0.1, x - r * 0.62, y - r * 0.76);
+      ctx.moveTo(x + r * 0.6, y + r * 0.78);
+      ctx.quadraticCurveTo(x + r * 0.15, y - r * 0.1, x + r * 0.62, y - r * 0.76);
+      ctx.stroke();
+    } else if (kind === "soccer") {
+      ctx.fillStyle = OUT;
+      ctx.beginPath();
+      for (let k = 0; k < 5; k++) {
+        const a = (k / 5) * Math.PI * 2 - Math.PI / 2;
+        ctx[k ? "lineTo" : "moveTo"](x + Math.cos(a) * r * 0.42, y + Math.sin(a) * r * 0.42);
+      }
+      ctx.closePath(); ctx.fill();
+    } else if (kind === "bowl") {
+      ctx.fillStyle = "rgba(0,0,0,0.55)";
+      ctx.beginPath(); ctx.arc(x - r * 0.28, y - r * 0.22, r * 0.17, 0, 7);
+      ctx.arc(x + r * 0.22, y - r * 0.28, r * 0.17, 0, 7);
+      ctx.arc(x - r * 0.02, y + r * 0.18, r * 0.17, 0, 7); ctx.fill();
+    }
+    // gloss
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    ctx.beginPath(); ctx.ellipse(x - r * 0.34, y - r * 0.4, r * 0.26, r * 0.16, -0.6, 0, 7); ctx.fill();
+    ctx.restore();
+  };
+
+  // ---- cartoon chicken (feet at y) ----
+  A.chicken = function (ctx, x, y, s, combColor, t, face) {
+    const f = face === -1 ? -1 : 1;
+    const bob = Math.sin((t || 0) * 8) * 1.2 * s;
+    ctx.save(); ctx.translate(x, y - bob); ctx.scale(s, s);
+    ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    // legs
+    limb(ctx, -4, -9, -4, 0, 3, "#e8a33a");
+    limb(ctx, 4, -9, 4, 0, 3, "#e8a33a");
+    // body
+    ctx.fillStyle = "#fdfdff";
+    ctx.beginPath(); ctx.ellipse(0, -19, 13, 11, 0, 0, 7); ctx.fill(); ctx.stroke();
+    // wing
+    ctx.fillStyle = "#e6e9f5";
+    ctx.beginPath(); ctx.ellipse(f * -2, -19, 6.5, 4.6, f * -0.35, 0, 7); ctx.fill(); ctx.stroke();
+    // head
+    ctx.fillStyle = "#fdfdff";
+    ctx.beginPath(); ctx.arc(f * 8, -31, 7.5, 0, 7); ctx.fill(); ctx.stroke();
+    // comb
+    ctx.fillStyle = combColor || "#ff4d4d";
+    ctx.beginPath();
+    ctx.moveTo(f * 5, -37);
+    ctx.quadraticCurveTo(f * 7, -43, f * 9, -37);
+    ctx.quadraticCurveTo(f * 11, -43, f * 12.5, -36.5);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // beak + wattle
+    ctx.fillStyle = "#f0a52e";
+    ctx.beginPath(); ctx.moveTo(f * 15, -31); ctx.lineTo(f * 22, -29); ctx.lineTo(f * 15, -27); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = combColor || "#ff4d4d";
+    ctx.beginPath(); ctx.ellipse(f * 13, -25, 2.4, 3.4, 0, 0, 7); ctx.fill();
+    // eye
+    ctx.fillStyle = OUT;
+    ctx.beginPath(); ctx.arc(f * 10, -32.5, 1.9, 0, 7); ctx.fill();
+    ctx.restore();
+  };
+
+  // ---- bowling pin (base at y) ----
+  A.pin = function (ctx, x, y, s, down) {
+    ctx.save(); ctx.translate(x, y); ctx.scale(s, s);
+    if (down) ctx.rotate(1.25);
+    ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    ctx.fillStyle = "#f7f9ff";
+    ctx.beginPath();
+    ctx.moveTo(-4, 0);
+    ctx.quadraticCurveTo(-9, -6, -6, -13);
+    ctx.quadraticCurveTo(-4, -19, -3.4, -22);
+    ctx.quadraticCurveTo(0, -26, 3.4, -22);
+    ctx.quadraticCurveTo(4, -19, 6, -13);
+    ctx.quadraticCurveTo(9, -6, 4, 0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#ff4d4d";
+    ctx.beginPath(); ctx.ellipse(0, -17, 5.2, 1.8, 0, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(0, -13, 6.2, 1.8, 0, 0, 7); ctx.fill();
+    ctx.restore();
+  };
+
+  A.OUT = OUT;
+  window.Art = A;
+})();

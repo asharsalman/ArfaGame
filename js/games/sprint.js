@@ -48,19 +48,12 @@
       }
 
       function runner(ctx, r, cy) {
-        const lean = Math.sin(r.anim) * Math.min(1, r.v / 220);
-        ctx.strokeStyle = r.b.color; ctx.fillStyle = r.b.color; ctx.lineWidth = 4;
-        ctx.shadowColor = r.b.color; ctx.shadowBlur = 10;
-        const x = r.x;
-        ctx.beginPath(); ctx.arc(x, cy - 26, 9, 0, 7); ctx.fill();          // head
-        ctx.beginPath(); ctx.moveTo(x, cy - 17); ctx.lineTo(x, cy + 4); ctx.stroke(); // body
-        ctx.beginPath();                                                    // legs
-        ctx.moveTo(x, cy + 4); ctx.lineTo(x + 12 * lean, cy + 22);
-        ctx.moveTo(x, cy + 4); ctx.lineTo(x - 12 * lean, cy + 22); ctx.stroke();
-        ctx.beginPath();                                                    // arms
-        ctx.moveTo(x, cy - 10); ctx.lineTo(x - 12 * lean, cy - 2);
-        ctx.moveTo(x, cy - 10); ctx.lineTo(x + 12 * lean, cy - 2); ctx.stroke();
-        ctx.shadowBlur = 0;
+        const feet = cy + 26;
+        Art.shadow(ctx, r.x, feet + 1, 15, 0.24);
+        Art.stickman(ctx, r.x, feet, {
+          color: r.b.color, scale: 0.92, t: r.anim,
+          pose: r.done ? "cheer" : (r.v > 30 ? "run" : "ready"), face: 1,
+        });
       }
 
       function render(ctx) {

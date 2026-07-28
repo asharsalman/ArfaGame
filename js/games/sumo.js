@@ -100,13 +100,31 @@
 
         for (const p of players) {
           if (!p.alive) continue;
-          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 22;
-          ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-          ctx.fillStyle = "rgba(255,255,255,0.9)";
-          ctx.beginPath(); ctx.arc(p.x - 10, p.y - 9, 6, 0, 7); ctx.fill();
-          ctx.beginPath(); ctx.arc(p.x + 10, p.y - 9, 6, 0, 7); ctx.fill();
-          ctx.fillStyle = "#10131f";
-          ctx.fillText(p.b.id, p.x - 5, p.y + 18);
+          const lean = Math.atan2(p.vy, p.vx), spd = Math.min(1, Math.hypot(p.vx, p.vy) / 340);
+          Art.shadow(ctx, p.x, p.y + PR - 2, PR * 0.9, 0.3);
+          // round sumo body
+          ctx.save();
+          ctx.translate(p.x + Math.cos(lean) * spd * 4, p.y + Math.sin(lean) * spd * 4);
+          ctx.fillStyle = p.b.color; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 4;
+          ctx.beginPath(); ctx.arc(0, 0, PR, 0, 7); ctx.fill(); ctx.stroke();
+          // belt
+          ctx.fillStyle = "rgba(0,0,0,0.28)";
+          ctx.beginPath(); ctx.ellipse(0, PR * 0.42, PR * 0.92, PR * 0.24, 0, 0, 7); ctx.fill();
+          // face
+          ctx.fillStyle = "#fdfdff"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(-9, -6, 7, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.beginPath(); ctx.arc(9, -6, 7, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = Art.OUT;
+          ctx.beginPath();
+          ctx.arc(-9 + Math.cos(lean) * 2.4, -6 + Math.sin(lean) * 2.4, 3, 0, 7);
+          ctx.arc(9 + Math.cos(lean) * 2.4, -6 + Math.sin(lean) * 2.4, 3, 0, 7);
+          ctx.fill();
+          ctx.lineWidth = 3; ctx.strokeStyle = Art.OUT;
+          ctx.beginPath(); ctx.arc(0, 8, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+          // topknot
+          ctx.fillStyle = Art.OUT;
+          ctx.beginPath(); ctx.ellipse(0, -PR + 2, 6, 4.5, 0, 0, 7); ctx.fill();
+          ctx.restore();
         }
 
         // scoreboard

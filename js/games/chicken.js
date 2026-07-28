@@ -23,7 +23,7 @@
         { x: M + 8, y: M + 8 }, { x: W - M - PENW - 8, y: H - M - PENH - 8 },
         { x: W - M - PENW - 8, y: M + 8 }, { x: M + 8, y: H - M - PENH - 8 },
       ];
-      let players, chickens, timeLeft, phase, count, matchOver;
+      let players, chickens, timeLeft, phase, count, matchOver, time = 0;
       const results = Eng.Results();
 
       function reset() {
@@ -44,6 +44,7 @@
       }
 
       function update(dt) {
+        time += dt;
         if (matchOver) { if (results.update(dt, input)) reset(); return; }
         if (phase === "count") { count -= dt; if (count <= 0) phase = "play"; return; }
 
@@ -56,6 +57,8 @@
           if (input.down(p.b.left)) vx -= 1; if (input.down(p.b.right)) vx += 1;
           if (input.down(p.b.up)) vy -= 1; if (input.down(p.b.down)) vy += 1;
           const m = Math.hypot(vx, vy) || 1;
+          p.moving = !!(vx || vy);
+          if (vx) p.face = vx > 0 ? 1 : -1;
           p.x = clamp(p.x + (vx / m) * 270 * dt, AX0, AX1);
           p.y = clamp(p.y + (vy / m) * 270 * dt, AY0, AY1);
           // trailing carried chickens
@@ -81,6 +84,7 @@
           let near = null, nd = 86;
           for (const p of players) { const d = dist(p.x, p.y, ch.x, ch.y); if (d < nd) { nd = d; near = p; } }
           if (near) { const a = Math.atan2(ch.y - near.y, ch.x - near.x); vx = Math.cos(a) * 165; vy = Math.sin(a) * 165; }
+          if (Math.abs(vx) > 8) ch.face = vx > 0 ? 1 : -1;
           ch.x = clamp(ch.x + vx * dt, AX0, AX1); ch.y = clamp(ch.y + vy * dt, AY0, AY1);
           for (const p of players) {
             if (dist(p.x, p.y, ch.x, ch.y) < PR + CR) { ch.state = "carried"; p.carried.push(ch); break; }
@@ -88,11 +92,9 @@
         }
       }
 
-      function drawChicken(ctx, x, y, s) {
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(x, y, 11 * s, 10 * s, 0, 0, 7); ctx.fill();
-        ctx.fillStyle = comb; ctx.beginPath(); ctx.arc(x, y - 9 * s, 3 * s, 0, 7); ctx.fill();
-        ctx.fillStyle = "#ffb84d"; ctx.beginPath(); ctx.moveTo(x - 10 * s, y); ctx.lineTo(x - 15 * s, y + 2 * s); ctx.lineTo(x - 10 * s, y + 3 * s); ctx.fill();
-        ctx.fillStyle = "#0b0e1a"; ctx.beginPath(); ctx.arc(x - 5 * s, y - 2 * s, 1.6 * s, 0, 7); ctx.fill();
+      function drawChicken(ctx, ch, s) {
+        Art.shadow(ctx, ch.x, ch.y + 15 * s, 11 * s, 0.22);
+        Art.chicken(ctx, ch.x, ch.y + 15 * s, s, comb, time + ch.x * 0.02, ch.face || 1);
       }
 
       function render(ctx) {
@@ -111,17 +113,19 @@
           text(ctx, `${p.b.name}: ${p.count}`, p.pen.x + p.pen.w / 2, p.pen.y - 12, { font: "800 16px system-ui", color: p.b.color });
         }
         // penned chickens
-        for (const ch of chickens) if (ch.state === "penned") drawChicken(ctx, ch.x, ch.y, 0.8);
+        for (const ch of chickens) if (ch.state === "penned") drawChicken(ctx, ch, 0.72);
         // loose + carried
-        for (const ch of chickens) if (ch.state !== "penned") drawChicken(ctx, ch.x, ch.y, 1);
+        for (const ch of chickens) if (ch.state !== "penned") drawChicken(ctx, ch, 0.95);
 
-        // players (farmers)
+        // players (stickman farmers in straw hats)
         for (const p of players) {
-          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 14;
-          ctx.beginPath(); ctx.arc(p.x, p.y, PR, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-          ctx.fillStyle = "#10131f"; ctx.fillRect(p.x - 12, p.y - PR - 5, 24, 6); // hat brim
-          ctx.fillRect(p.x - 7, p.y - PR - 12, 14, 8);
-          ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(p.x - 6, p.y - 3, 3, 0, 7); ctx.arc(p.x + 6, p.y - 3, 3, 0, 7); ctx.fill();
+          const feet = p.y + 20;
+          Art.shadow(ctx, p.x, feet, 16);
+          Art.stickman(ctx, p.x, feet, {
+            color: p.b.color, scale: 0.95, t: time,
+            pose: p.moving ? "run" : (p.carried.length ? "carry" : "idle"),
+            face: p.face || 1, hat: "straw",
+          });
         }
 
         text(ctx, `⏱ ${Math.ceil(timeLeft)}s`, W / 2, 30, { font: "900 26px system-ui", color: "#fff", glow: "#000" });

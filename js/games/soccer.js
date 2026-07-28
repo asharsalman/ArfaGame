@@ -16,7 +16,7 @@
       const FLOOR = H - 60, GRAV = 1500, PRAD = 32, BR = 16;
       const GW = 70, GH = 170, TARGET = 5;       // goal width & height
       const ballCol = Eng.skinColor("soccer", "#ffffff");
-      let p1, p2, ball, s1, s2, msg, msgT, matchOver;
+      let p1, p2, ball, s1, s2, msg, msgT, matchOver, time = 0;
       const results = Eng.Results();
       function endMatch() {
         const order = s1 >= s2
@@ -58,6 +58,7 @@
       }
 
       function update(dt) {
+        time += dt;
         if (matchOver) { if (results.update(dt, input)) reset(); return; }
         if (msgT > 0) { msgT -= dt; if (msgT <= 0) kickoff(1); return; }
 
@@ -111,18 +112,18 @@
         ctx.strokeStyle = "rgba(255,255,255,0.15)"; ctx.lineWidth = 1;
         for (let i = 8; i < GW; i += 14) { ctx.beginPath(); ctx.moveTo(i, FLOOR - GH); ctx.lineTo(i, FLOOR); ctx.stroke(); ctx.beginPath(); ctx.moveTo(W - i, FLOOR - GH); ctx.lineTo(W - i, FLOOR); ctx.stroke(); }
 
-        const head = (p) => {
-          const cy = p.y - PRAD;
-          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 16;
-          ctx.beginPath(); ctx.arc(p.x, cy, PRAD, Math.PI, 0); ctx.lineTo(p.x + PRAD, p.y); ctx.lineTo(p.x - PRAD, p.y); ctx.fill();
-          ctx.shadowBlur = 0; ctx.fillStyle = "#0a1018";
-          ctx.beginPath(); ctx.arc(p.x + (p === p1 ? 10 : -10), cy - 6, 5, 0, 7); ctx.fill();
+        const figure = (p, face) => {
+          Art.shadow(ctx, p.x, FLOOR + 2, 19, 0.25);
+          Art.stickman(ctx, p.x, p.y, {
+            color: p.b.color, scale: 1.12, t: time,
+            pose: !p.onGround ? "jump" : (p.vx ? "run" : "idle"), face,
+          });
         };
-        head(p1); head(p2);
+        figure(p1, ball.x >= p1.x ? 1 : -1);
+        figure(p2, ball.x >= p2.x ? 1 : -1);
 
-        ctx.fillStyle = ballCol; ctx.shadowColor = ballCol; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.arc(ball.x, ball.y, BR, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-        ctx.strokeStyle = "#111"; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(ball.x, ball.y, BR, 0, 7); ctx.stroke();
+        Art.shadow(ctx, ball.x, FLOOR + 2, BR * 0.9, 0.2);
+        Art.ball(ctx, ball.x, ball.y, BR, "soccer", ballCol);
 
         text(ctx, `P1  ${s1}`, 30, 34, { align: "left", font: "800 26px system-ui", color: p1.b.color });
         text(ctx, `${s2}  P2`, W - 30, 34, { align: "right", font: "800 26px system-ui", color: p2.b.color });

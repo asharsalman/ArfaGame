@@ -14,7 +14,7 @@
     create(env) {
       const { W, H, input } = env;
       const FLOOR = H - 70, GRAV = 1800, REACH = 52, TARGET = 5;
-      let p1, p2, roundT, msg, matchOver;
+      let p1, p2, roundT, msg, matchOver, time = 0;
       const results = Eng.Results();
       function endMatch() {
         const order = p1.score >= p2.score ? [p1, p2] : [p2, p1];
@@ -55,6 +55,7 @@
       }
 
       function update(dt) {
+        time += dt;
         if (matchOver) { if (results.update(dt, input)) reset(); return; }
         if (roundT > 0) { roundT -= dt; if (roundT <= 0) place(); return; }
         ctrl(p1, p2, dt); ctrl(p2, p1, dt);
@@ -72,16 +73,21 @@
       }
 
       function fig(ctx, p) {
-        const c = p.b.color;
-        ctx.strokeStyle = c; ctx.fillStyle = c; ctx.lineWidth = 4;
-        ctx.shadowColor = c; ctx.shadowBlur = 8;
-        ctx.beginPath(); ctx.arc(p.x, p.y - 50, 10, 0, 7); ctx.fill();           // head
-        ctx.beginPath(); ctx.moveTo(p.x, p.y - 40); ctx.lineTo(p.x, p.y - 14); ctx.stroke(); // body
-        ctx.beginPath(); ctx.moveTo(p.x, p.y - 14); ctx.lineTo(p.x - 9, p.y); ctx.moveTo(p.x, p.y - 14); ctx.lineTo(p.x + 9, p.y); ctx.stroke(); // legs
-        // sword arm
-        const ex = p.x + p.face * (p.lungeT > 0 ? REACH + 8 : 22);
-        ctx.beginPath(); ctx.moveTo(p.x, p.y - 34); ctx.lineTo(ex, p.y - 34); ctx.stroke();
-        ctx.shadowBlur = 0;
+        Art.shadow(ctx, p.x, FLOOR + 2, 17, 0.25);
+        Art.stickman(ctx, p.x, p.y, {
+          color: p.b.color, scale: 1.05, t: time,
+          pose: p.lungeT > 0 ? "swing" : (!p.onGround ? "jump" : "ready"),
+          face: p.face,
+        });
+        // blade extends from the lead hand
+        const h = Art.handPos(p.x, p.y, {
+          scale: 1.05, t: time, face: p.face,
+          pose: p.lungeT > 0 ? "swing" : (!p.onGround ? "jump" : "ready"),
+        });
+        const ex = h.x + p.face * (p.lungeT > 0 ? REACH : 26);
+        Art.limb(ctx, h.x, h.y, ex, h.y - 4, 5, "#dbe4ff");
+        ctx.fillStyle = "#8a93b8";
+        ctx.beginPath(); ctx.arc(h.x, h.y, 4, 0, 7); ctx.fill();
       }
 
       function render(ctx) {

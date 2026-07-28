@@ -26,6 +26,13 @@
     sprint: `<svg viewBox="0 0 48 48" stroke="currentColor" stroke-width="3" fill="currentColor"><line x1="11" y1="6" x2="11" y2="43" stroke="currentColor" stroke-linecap="round"/><rect x="14" y="9" width="6" height="6"/><rect x="26" y="9" width="6" height="6"/><rect x="20" y="15" width="6" height="6"/><rect x="32" y="15" width="6" height="6"/><rect x="14" y="21" width="6" height="6"/><rect x="26" y="21" width="6" height="6"/></svg>`,
     chicken: `<svg viewBox="0 0 48 48" fill="currentColor"><path d="M17 9 q2 -5 4 0 q2 -5 4 0 v5 h-8 z" fill="#ff4d4d"/><ellipse cx="22" cy="30" rx="14" ry="13"/><circle cx="17" cy="26" r="2.4" fill="#0b0e1a"/><path d="M8 28 l-6 2.5 6 2.5 z" fill="#ffb84d"/></svg>`,
     gunduel: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><circle cx="24" cy="24" r="14"/><circle cx="24" cy="24" r="4.5" fill="currentColor" stroke="none"/><path d="M24 4 v8 M24 36 v8 M4 24 h8 M36 24 h8" stroke-linecap="round"/></svg>`,
+    basketball: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><circle cx="24" cy="28" r="13"/><path d="M11 28 h26 M24 15 v26 M15 19 q9 9 0 18 M33 19 q-9 9 0 18"/><rect x="12" y="5" width="24" height="3" rx="1.5" fill="currentColor" stroke="none"/></svg>`,
+    penalty: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linejoin="round"><path d="M6 34 V12 H42 V34"/><path d="M14 12 v22 M24 12 v22 M34 12 v22 M6 20 h36 M6 27 h36" stroke-width="1.5"/><circle cx="24" cy="40" r="4.5" fill="currentColor" stroke="none"/></svg>`,
+    snake: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 38 h12 a6 6 0 0 0 0-12 h-8 a6 6 0 0 1 0-12 h16"/><circle cx="38" cy="14" r="4" fill="currentColor"/></svg>`,
+    spinners: `<svg viewBox="0 0 48 48" fill="currentColor"><path d="M24 8 l13 8 v16 l-13 8 -13-8 V16 z" opacity=".85"/><circle cx="24" cy="24" r="6" fill="#0b0e1a"/><path d="M24 3 a21 21 0 0 1 15 6" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"/></svg>`,
+    volleyball: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><circle cx="24" cy="24" r="16"/><path d="M24 8 q-8 16 4 32 M8 20 q16 -2 30 10 M40 18 q-16 4 -22 21"/></svg>`,
+    bowling: `<svg viewBox="0 0 48 48" fill="currentColor"><ellipse cx="16" cy="22" rx="7" ry="13"/><rect x="13" y="12" width="6" height="3" fill="#0b0e1a"/><circle cx="34" cy="32" r="11"/><circle cx="31" cy="29" r="2" fill="#0b0e1a"/><circle cx="37" cy="29" r="2" fill="#0b0e1a"/><circle cx="34" cy="35" r="2" fill="#0b0e1a"/></svg>`,
+    memory: `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3"><rect x="5" y="9" width="17" height="24" rx="3"/><rect x="26" y="15" width="17" height="24" rx="3" fill="currentColor" fill-opacity=".25"/><circle cx="13.5" cy="21" r="4" fill="currentColor" stroke="none"/></svg>`,
   };
 
   let canvas, ctx, input, env;
@@ -190,7 +197,18 @@
   }
 
   // ---------- launch / loop ----------
+  // Space/Enter are gameplay keys — if a menu button keeps focus the browser
+  // re-activates it on the next press, so drop focus whenever we change screen.
+  function dropFocus() {
+    if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+  }
+
   function launch(def, count, bot) {
+    dropFocus();
+    // don't let the click/keypress that started the game leak into its first frame
+    input.justP = {};
+    input.pointer.pressed = false;
+    input.pointer.down = false;
     if (current && current.destroy) current.destroy();
     currentDef = def; currentCount = count; currentBot = bot;
     env.players = count; env.bot = bot;
@@ -205,6 +223,7 @@
   }
 
   function exitToMenu() {
+    dropFocus();
     if (current && current.destroy) current.destroy();
     current = null; currentDef = null;
     state = "menu";
