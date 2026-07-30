@@ -75,6 +75,8 @@
 
     buildMenu();
     refreshCoins();
+    const gc = document.getElementById("gameCount");
+    if (gc) gc.textContent = GAMES.length;      // keep the blurb honest
     window.addEventListener("keydown", (e) => {
       if (e.code === "Escape") {
         if (state === "play") exitToMenu();
@@ -401,8 +403,19 @@
     section("Stickman — Legwear", "#4dc4ff", SVG_LEGS, ITEMS.filter((i) => i.game === "legs"));
     section("Stickman — Hair", "#ff8a3a", SVG_HAIR, ITEMS.filter((i) => i.game === "hair"));
     section("Stickman — Hair Colour", "#ffd24d", SVG_HAIR, ITEMS.filter((i) => i.game === "haircol"));
-    GAMES.forEach((g) =>
-      section(g.name, g.color, icon(g.id, g.icon), ITEMS.filter((it) => it.game === g.id)));
+    // per-game sections, including extra categories that belong to a game
+    const EXTRA = {
+      geometrydash: [["Cube Faces", "gdface"]],
+      snake: [["Snake Skins", "snakeskin"]],
+      tank: [["Tank Hulls", "tankhull"]],
+      airhockey: [["Tables", "ahtable"]],
+      racing: [["Race Cars", "racecar"]],
+    };
+    GAMES.forEach((g) => {
+      section(g.name, g.color, icon(g.id, g.icon), ITEMS.filter((it) => it.game === g.id));
+      (EXTRA[g.id] || []).forEach(([label, key]) =>
+        section(`${g.name} — ${label}`, g.color, icon(g.id, g.icon), ITEMS.filter((it) => it.game === key)));
+    });
   }
 
   function itemCard(it) {
@@ -515,6 +528,37 @@
         c.fillStyle = Art.OUT; c.beginPath(); c.ellipse(0, -9, 10, 3.4, 0, 0, 7); c.fill();
         c.beginPath(); c.arc(-3, -2.5, 1.7, 0, 7); c.arc(3, -2.5, 1.7, 0, 7); c.fill();
         c.restore(); break;
+      }
+      case "cubeface": {
+        c.save(); c.translate(cx, cy); c.rotate(-0.14);
+        const gg = c.createLinearGradient(-30, -30, 30, 30);
+        gg.addColorStop(0, "#fff"); gg.addColorStop(1, Eng.skinColor("geometrydash", "#4df0ff"));
+        c.shadowColor = col; c.shadowBlur = 20;
+        c.fillStyle = gg; Eng.roundRect(c, -30, -30, 60, 60, 9); c.fill();
+        c.shadowBlur = 0;
+        Art.cubeFace(c, 60, it.extra);
+        c.restore(); break;
+      }
+      case "snakeskin": {
+        const sc = "#7dff4d";
+        for (let k = 0; k < 5; k++) {
+          const x = 34 + k * 27, y = cy + Math.sin(k * 0.9) * 12;
+          c.fillStyle = sc;
+          if (it.extra === "glow" && k === 4) { c.shadowColor = sc; c.shadowBlur = 16; }
+          Eng.roundRect(c, x - 11, y - 11, 22, 22, k === 4 ? 8 : 6); c.fill();
+          c.shadowBlur = 0;
+          if (k === 4) continue;
+          if (it.extra === "stripe" && k % 2 === 0) { c.fillStyle = "rgba(0,0,0,0.35)"; c.fillRect(x - 8, y - 2, 16, 4); }
+          else if (it.extra === "scale") {
+            c.strokeStyle = "rgba(0,0,0,0.35)"; c.lineWidth = 1.8;
+            c.beginPath(); c.arc(x, y - 4, 6, 0.15 * Math.PI, 0.85 * Math.PI); c.stroke();
+          } else if (it.extra === "spot") {
+            c.fillStyle = "rgba(0,0,0,0.32)"; c.beginPath(); c.arc(x, y, 4, 0, 7); c.fill();
+          } else if (it.extra === "glow") {
+            c.fillStyle = "rgba(255,255,255,0.28)"; c.fillRect(x - 3, y - 3, 6, 6);
+          }
+        }
+        break;
       }
       case "racecar": {
         const bodyC = col || "#8fa4d6";
