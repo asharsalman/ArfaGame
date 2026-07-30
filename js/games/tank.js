@@ -16,6 +16,9 @@
       const { W, H, input } = env;
       const N = env.players, M = 24, TS = 30, TARGET = 5;
       const shellCol = Eng.skinColor("tank", "#ffe066");
+      const hullItem = Eng.equippedItem("tankhull") || {};
+      const tankBody = hullItem.color || "#5a6280";
+      const tankPattern = hullItem.extra || "";
       const border = [
         { x: M, y: M, w: W - 2 * M, h: 14 },
         { x: M, y: H - M - 14, w: W - 2 * M, h: 14 },
@@ -124,11 +127,49 @@
 
         for (const t of tanks) {
           if (!t.alive) continue;
+          Art.shadow(ctx, t.x, t.y + TS * 0.6, TS * 0.75, 0.32);
           ctx.save(); ctx.translate(t.x, t.y); ctx.rotate(t.a);
-          ctx.fillStyle = t.b.color; ctx.shadowColor = t.b.color; ctx.shadowBlur = 16;
-          ctx.fillRect(-TS / 2, -TS / 2, TS, TS);
-          ctx.shadowBlur = 0; ctx.fillStyle = "#0c0f1d"; ctx.fillRect(-6, -6, 12, 12);
-          ctx.fillStyle = t.b.color; ctx.fillRect(0, -4, 26, 8);
+
+          // tracks
+          ctx.fillStyle = "#2a2f42"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 2.5;
+          [-1, 1].forEach((s) => {
+            ctx.beginPath();
+            Eng.roundRect(ctx, -TS / 2 - 2, s * (TS / 2) - 6, TS + 4, 11, 4);
+            ctx.fill(); ctx.stroke();
+          });
+          ctx.fillStyle = "#4a5170";
+          for (let k = -1; k <= 1; k++) [-1, 1].forEach((s) => {
+            ctx.fillRect(k * 9 - 3, s * (TS / 2) - 4, 6, 7);
+          });
+
+          // hull
+          ctx.fillStyle = tankBody; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 3;
+          Eng.roundRect(ctx, -TS / 2, -TS / 2 + 2, TS, TS - 4, 5);
+          ctx.fill(); ctx.stroke();
+          if (tankPattern === "camo") {           // camo splotches
+            ctx.fillStyle = "rgba(0,0,0,0.28)";
+            [[-8, -4, 7], [3, 5, 6], [9, -6, 5]].forEach(([bx, by, br]) => {
+              ctx.beginPath(); ctx.ellipse(bx, by, br, br * 0.72, 0.4, 0, 7); ctx.fill();
+            });
+          }
+          // team stripe so you can still tell players apart
+          ctx.fillStyle = t.b.color;
+          ctx.fillRect(-TS / 2 + 2, -3, TS - 4, 6);
+
+          // barrel
+          ctx.fillStyle = "#3a4160"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 2.5;
+          ctx.beginPath(); Eng.roundRect(ctx, 6, -3.5, 28, 7, 3); ctx.fill(); ctx.stroke();
+
+          // turret ring + the driver sitting in the hatch
+          ctx.fillStyle = tankBody; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.rotate(-t.a);                        // driver stays upright
+          ctx.fillStyle = t.b.color; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 2.5;
+          ctx.beginPath(); ctx.arc(0, -3, 6.2, 0, 7); ctx.fill(); ctx.stroke();
+          ctx.fillStyle = Art.OUT;                 // helmet brim + eyes
+          ctx.beginPath(); ctx.ellipse(0, -7.5, 7.4, 2.6, 0, 0, 7); ctx.fill();
+          ctx.beginPath();
+          ctx.arc(-2.2, -2.6, 1.3, 0, 7); ctx.arc(2.2, -2.6, 1.3, 0, 7); ctx.fill();
           ctx.restore();
         }
         ctx.fillStyle = shellCol;

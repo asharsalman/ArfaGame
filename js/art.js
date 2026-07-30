@@ -59,7 +59,8 @@
       const st = window.stickmanStyle(o.color);
       o = Object.assign({}, o, {
         // NB: never override o.color — that's the player's identity colour
-        shirt: o.shirt || st.shirt,
+        top: o.top || st.top, topColor: o.topColor || st.topColor,
+        legs: o.legs || st.legs, legsColor: o.legsColor || st.legsColor,
         hat: o.hat || st.hat,
         hatColor: o.hatColor || st.hatColor,
         hair: o.hair || st.hair,
@@ -100,11 +101,7 @@
       ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke();
     });
 
-    if (o.shirt) {                       // purchased shirt over the torso
-      ctx.strokeStyle = o.shirt; ctx.lineWidth = 13; ctx.lineCap = "butt";
-      ctx.beginPath(); ctx.moveTo(0, SHO + 1); ctx.lineTo(0, HIP - 3); ctx.stroke();
-      ctx.lineCap = "round";
-    }
+    A.wear(ctx, o, p, SHO, HIP, HEAD);
 
     ctx.fillStyle = c;
     ctx.beginPath(); ctx.arc(0, HEAD, R, 0, 7); ctx.fill();
@@ -142,33 +139,133 @@
     ctx.restore();
   };
 
+  /* Clothing drawn over the stickman (local coords, called from inside stickman).
+     o.top: tshirt|hoodie|halfsleeve|tank   o.legs: pants|shorts|skirt */
+  A.wear = function (ctx, o, p, SHO, HIP, HEAD) {
+    // ---- legwear first, so the shirt hem sits over it ----
+    if (o.legs && o.legsColor) {
+      const c = o.legsColor;
+      const frac = o.legs === "shorts" ? 0.45 : 1;
+      if (o.legs === "skirt") {
+        ctx.fillStyle = c; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.moveTo(-9, HIP - 3); ctx.lineTo(9, HIP - 3);
+        ctx.lineTo(15, HIP + 13); ctx.lineTo(-15, HIP + 13);
+        ctx.closePath(); ctx.fill(); ctx.stroke();
+      } else {
+        [p.l1, p.l2].forEach((l) => {
+          ctx.lineCap = "round";
+          ctx.strokeStyle = OUT; ctx.lineWidth = 12;
+          ctx.beginPath(); ctx.moveTo(0, HIP);
+          ctx.lineTo(l[0] * frac, HIP + l[1] * frac); ctx.stroke();
+          ctx.strokeStyle = c; ctx.lineWidth = 8.5;
+          ctx.beginPath(); ctx.moveTo(0, HIP);
+          ctx.lineTo(l[0] * frac, HIP + l[1] * frac); ctx.stroke();
+        });
+      }
+    }
+
+    // ---- top ----
+    const top = o.top, tc = o.topColor || o.shirt;
+    if (!tc) return;
+    // sleeves along the arms
+    const sleeve = top === "hoodie" ? 1 : top === "halfsleeve" ? 0.62 : top === "tshirt" ? 0.4 : 0;
+    if (sleeve > 0) {
+      [p.a1, p.a2].forEach((a) => {
+        ctx.lineCap = "round";
+        ctx.strokeStyle = OUT; ctx.lineWidth = 11;
+        ctx.beginPath(); ctx.moveTo(0, SHO);
+        ctx.lineTo(a[0] * sleeve, SHO + a[1] * sleeve); ctx.stroke();
+        ctx.strokeStyle = tc; ctx.lineWidth = 7.5;
+        ctx.beginPath(); ctx.moveTo(0, SHO);
+        ctx.lineTo(a[0] * sleeve, SHO + a[1] * sleeve); ctx.stroke();
+      });
+    }
+    // torso panel
+    ctx.fillStyle = tc; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    const halfW = top === "tank" ? 8 : 11;
+    ctx.beginPath();
+    ctx.moveTo(-halfW, SHO - 3);
+    ctx.lineTo(halfW, SHO - 3);
+    ctx.lineTo(halfW + 1, HIP + 2);
+    ctx.lineTo(-halfW - 1, HIP + 2);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    // hoodie: hood behind the head + a pocket
+    if (top === "hoodie") {
+      ctx.fillStyle = tc; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(0, HEAD + 5, 12.5, Math.PI * 0.05, Math.PI * 0.95);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(0, HIP - 6, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+    // simple collar
+    ctx.strokeStyle = "rgba(0,0,0,0.28)"; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(-5, SHO - 2); ctx.lineTo(0, SHO + 3); ctx.lineTo(5, SHO - 2); ctx.stroke();
+  };
+
   /* Hair styles drawn on the head (local coords, called from inside stickman). */
   A.hair = function (ctx, HEAD, R, f, style, col) {
-    ctx.fillStyle = col; ctx.strokeStyle = OUT; ctx.lineWidth = 2.2;
-    ctx.beginPath();
+    ctx.fillStyle = col; ctx.strokeStyle = OUT; ctx.lineWidth = 2.4;
+    const cap = (lift) => {                      // the skull-hugging part
+      ctx.beginPath();
+      ctx.arc(0, HEAD - (lift || 0), R + 1.6, Math.PI, 0);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    };
+    const bangs = () => {
+      ctx.beginPath();
+      ctx.moveTo(-R - 1.6, HEAD - 1);
+      ctx.quadraticCurveTo(-R * 0.3, HEAD + 4.5, R * 0.2, HEAD - 1.5);
+      ctx.quadraticCurveTo(R * 0.7, HEAD + 3, R + 1.6, HEAD - 2.5);
+      ctx.lineTo(R + 1.6, HEAD - 5); ctx.lineTo(-R - 1.6, HEAD - 5);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+    };
     switch (style) {
-      case "spiky":
-        for (let k = -2; k <= 2; k++) {
-          const x = k * 4.2;
-          ctx.moveTo(x - 3, HEAD - R + 1);
-          ctx.lineTo(x, HEAD - R - 7);
-          ctx.lineTo(x + 3, HEAD - R + 1);
-        }
-        ctx.fill(); ctx.stroke(); break;
-      case "bowl":
-        ctx.arc(0, HEAD - 1, R + 1.5, Math.PI, 0);
-        ctx.lineTo(R + 1.5, HEAD - 1); ctx.lineTo(-R - 1.5, HEAD - 1);
-        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
-      case "pony":
-        ctx.arc(0, HEAD - 2, R + 1.5, Math.PI, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+      case "short": cap(1); break;
+      case "bangs": cap(1); bangs(); break;
+      case "spikes":                              // neon-tipped spikes
+        cap(0);
         ctx.beginPath();
-        ctx.ellipse(-f * (R + 4), HEAD + 3, 4, 9, f * 0.4, 0, 7);
-        ctx.fill(); ctx.stroke(); break;
+        for (let k = -2; k <= 2; k++) {
+          const x = k * 4.4;
+          ctx.moveTo(x - 3.2, HEAD - R - 0.5);
+          ctx.lineTo(x + f * 1.6, HEAD - R - 9);
+          ctx.lineTo(x + 3.2, HEAD - R - 0.5);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case "ponyBangs":
+      case "pony":
+        cap(1);
+        if (style === "ponyBangs") bangs();
+        ctx.beginPath();                          // tie
+        ctx.arc(-f * (R + 2), HEAD - 2, 2.6, 0, 7); ctx.fill(); ctx.stroke();
+        ctx.beginPath();                          // tail
+        ctx.moveTo(-f * (R + 1), HEAD - 4);
+        ctx.quadraticCurveTo(-f * (R + 11), HEAD + 2, -f * (R + 6), HEAD + 13);
+        ctx.quadraticCurveTo(-f * (R + 3), HEAD + 5, -f * (R - 1), HEAD + 1);
+        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
+      case "bob":
+        cap(1);
+        ctx.beginPath();
+        ctx.moveTo(-R - 1.6, HEAD - 2);
+        ctx.quadraticCurveTo(-R - 4, HEAD + 11, -R + 1, HEAD + 11);
+        ctx.lineTo(-R + 1, HEAD - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(R + 1.6, HEAD - 2);
+        ctx.quadraticCurveTo(R + 4, HEAD + 11, R - 1, HEAD + 11);
+        ctx.lineTo(R - 1, HEAD - 2); ctx.closePath(); ctx.fill(); ctx.stroke();
+        bangs(); break;
       case "afro":
-        ctx.arc(0, HEAD - 3, R + 5.5, 0, 7); ctx.fill(); ctx.stroke(); break;
+        ctx.beginPath();
+        for (let k = 0; k < 11; k++) {            // puffy outline
+          const a = Math.PI + (k / 10) * Math.PI;
+          const rr = R + 6 + Math.sin(k * 2.3) * 1.6;
+          ctx[k ? "lineTo" : "moveTo"](Math.cos(a) * rr, HEAD - 2 + Math.sin(a) * rr);
+        }
+        ctx.closePath(); ctx.fill(); ctx.stroke(); break;
       case "mohawk":
-        ctx.moveTo(-3, HEAD - R + 2);
-        ctx.quadraticCurveTo(0, HEAD - R - 13, 3, HEAD - R + 2);
+        ctx.beginPath();
+        ctx.moveTo(-3.5, HEAD - R + 2);
+        ctx.quadraticCurveTo(0, HEAD - R - 15, 3.5, HEAD - R + 2);
         ctx.closePath(); ctx.fill(); ctx.stroke(); break;
     }
   };

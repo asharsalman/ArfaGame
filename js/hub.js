@@ -363,12 +363,13 @@
     section("Stickman — Hats", "#ffd24d",
       `<svg viewBox="0 0 48 48" fill="currentColor"><ellipse cx="24" cy="32" rx="20" ry="5"/><path d="M13 30 q1-18 11-18 t11 18 z"/></svg>`,
       ITEMS.filter((i) => i.game === "hat"));
-    section("Stickman — Hair", "#ff8a3a",
-      `<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="30" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 26 q3-16 13-16 t13 16 q-6-7-13-7 t-13 7z"/></svg>`,
-      ITEMS.filter((i) => i.game === "hair"));
-    section("Stickman — Shirts", "#4dff9e",
-      `<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"><circle cx="24" cy="11" r="6" fill="currentColor"/><path d="M24 18 v14 M24 32 l-8 12 M24 32 l8 12 M12 24 l12 3 l12-3"/></svg>`,
-      ITEMS.filter((i) => i.game === "body"));
+    const SVG_HAIR = `<svg viewBox="0 0 48 48" fill="currentColor"><circle cx="24" cy="30" r="12" fill="none" stroke="currentColor" stroke-width="3"/><path d="M11 26 q3-16 13-16 t13 16 q-6-7-13-7 t-13 7z"/></svg>`;
+    const SVG_TOP = `<svg viewBox="0 0 48 48" fill="currentColor"><path d="M17 10 l7 4 7-4 8 5-4 8-4-2v17H17V21l-4 2-4-8z"/></svg>`;
+    const SVG_LEGS = `<svg viewBox="0 0 48 48" fill="currentColor"><path d="M14 8h20l2 32h-9l-3-19-3 19h-9z"/></svg>`;
+    section("Stickman — Tops", "#4dff9e", SVG_TOP, ITEMS.filter((i) => i.game === "top"));
+    section("Stickman — Legwear", "#4dc4ff", SVG_LEGS, ITEMS.filter((i) => i.game === "legs"));
+    section("Stickman — Hair", "#ff8a3a", SVG_HAIR, ITEMS.filter((i) => i.game === "hair"));
+    section("Stickman — Hair Colour", "#ffd24d", SVG_HAIR, ITEMS.filter((i) => i.game === "haircol"));
     GAMES.forEach((g) =>
       section(g.name, g.color, icon(g.id, g.icon), ITEMS.filter((it) => it.game === g.id)));
   }
@@ -464,6 +465,26 @@
         c.beginPath(); c.rect(-5, 27, 10, 20); c.fill(); c.stroke();
         c.restore(); break;
       }
+      case "tank": {
+        c.save(); c.translate(cx, cy + 6);
+        c.fillStyle = "#2a2f42"; c.strokeStyle = Art.OUT; c.lineWidth = 2.5;
+        [-1, 1].forEach((s) => { Eng.roundRect(c, -34, s * 20 - 6, 68, 11, 4); c.fill(); c.stroke(); });
+        c.fillStyle = col; c.strokeStyle = Art.OUT; c.lineWidth = 3;
+        Eng.roundRect(c, -32, -18, 64, 36, 6); c.fill(); c.stroke();
+        if (it.extra === "camo") {
+          c.fillStyle = "rgba(0,0,0,0.3)";
+          [[-14, -6, 10], [6, 7, 9], [16, -8, 7]].forEach(([bx, by, br]) => {
+            c.beginPath(); c.ellipse(bx, by, br, br * 0.7, 0.4, 0, 7); c.fill();
+          });
+        }
+        c.fillStyle = "#3a4160"; c.strokeStyle = Art.OUT; c.lineWidth = 2.5;
+        Eng.roundRect(c, 20, -5, 40, 10, 4); c.fill(); c.stroke();
+        c.fillStyle = col; c.beginPath(); c.arc(0, 0, 15, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = "#8fa4d6"; c.beginPath(); c.arc(0, -3, 8, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = Art.OUT; c.beginPath(); c.ellipse(0, -9, 10, 3.4, 0, 0, 7); c.fill();
+        c.beginPath(); c.arc(-3, -2.5, 1.7, 0, 7); c.arc(3, -2.5, 1.7, 0, 7); c.fill();
+        c.restore(); break;
+      }
       case "ring":
         c.strokeStyle = col; c.lineWidth = 9; c.shadowColor = col; c.shadowBlur = 22;
         c.beginPath(); c.arc(cx, cy, 40, 0, 7); c.stroke(); c.shadowBlur = 0;
@@ -492,13 +513,31 @@
       case "chicken":
         Art.chicken(c, cx - 6, cy + 30, 1.5, col, 0.4, 1); break;
       case "stickman": {
-        Art.stickman(c, cx, H2 - 16, {
-          noStyle: true, color: "#8fa4d6", scale: 1.35, pose: "idle", t: 0,
-          hat: it.game === "hat" ? it.extra : "",
-          hatColor: it.game === "hat" ? it.color : undefined,
-          hair: it.game === "hair" ? it.extra : "",
-          hairColor: it.game === "hair" ? it.color : undefined,
-          shirt: it.game === "body" ? it.color : null,
+        // show the item on a mannequin, keeping whatever else is equipped
+        const st = window.stickmanStyle();
+        const o = {
+          noStyle: true, color: "#8fa4d6", scale: 1.4, pose: "idle", t: 0,
+          hat: st.hat, hatColor: st.hatColor,
+          hair: st.hair, hairColor: st.hairColor,
+          top: st.top, topColor: st.topColor,
+          legs: st.legs, legsColor: st.legsColor,
+        };
+        if (it.game === "hat") { o.hat = it.extra; o.hatColor = it.color; }
+        // a hat would cover the hair, so drop it while browsing hairstyles
+        if (it.game === "hair") { o.hair = it.extra; o.hat = ""; }
+        if (it.game === "top") { o.top = it.extra; o.topColor = it.color; }
+        if (it.game === "legs") { o.legs = it.extra; o.legsColor = it.color; }
+        Art.stickman(c, cx, H2 - 12, o);
+        break;
+      }
+      case "haircolor": {
+        // same mannequin, but force a visible style so the colour reads
+        const st = window.stickmanStyle();
+        Art.stickman(c, cx, H2 - 12, {
+          noStyle: true, color: "#8fa4d6", scale: 1.4, pose: "idle", t: 0,
+          hat: "",                                  // hat would hide the colour
+          hair: st.hair && st.hair !== "" ? st.hair : "bangs", hairColor: col,
+          top: st.top, topColor: st.topColor, legs: st.legs, legsColor: st.legsColor,
         });
         break;
       }

@@ -31,6 +31,14 @@
     { n: "Gold Shell", c: "#ffe066", p: 0 }, { n: "Plasma Shell", c: "#4df0ff", p: 100 },
     { n: "Pink Shell", c: "#ff5bd0", p: 140 },
   ]);
+  add("tankhull", "tank", [
+    { n: "Steel Hull", c: "#5a6280", p: 0 },
+    { n: "Desert Sand", c: "#b08a4a", p: 120 },
+    { n: "Forest Camo", c: "#4a6a3a", p: 180, x: "camo" },
+    { n: "Arctic Camo", c: "#8fa8c8", p: 180, x: "camo" },
+    { n: "Blue Steel", c: "#3a5a9e", p: 220 },
+    { n: "Crimson Hull", c: "#8a2a2a", p: 260 },
+  ]);
   add("tron", "trail", [
     { n: "Cyan Grid", c: "#4df0ff", p: 0 }, { n: "Amber Grid", c: "#ffb84d", p: 100 },
     { n: "Violet Grid", c: "#b46bff", p: 140 },
@@ -98,40 +106,66 @@
     { n: "Straw Hat", c: "#e8b24a", p: 110, x: "straw" },
     { n: "Cowboy Hat", c: "#6b4a2a", p: 160, x: "cowboy" },
   ]);
-  // Shirts tint the torso only — each player keeps their own identity colour.
-  add("body", "stickman", [
-    { n: "No Shirt", c: null, p: 0, x: "" },
-    { n: "Snow Vest", c: "#f2f5ff", p: 100, x: "shirt" },
-    { n: "Midnight Vest", c: "#2b3566", p: 120, x: "shirt" },
-    { n: "Sunset Vest", c: "#ff8a3a", p: 140, x: "shirt" },
-    { n: "Mint Vest", c: "#4dff9e", p: 160, x: "shirt" },
-    { n: "Violet Vest", c: "#b46bff", p: 200, x: "shirt" },
+  // Clothing. Each player keeps their own identity colour on the limbs/head.
+  add("top", "stickman", [
+    { n: "Bare", c: null, p: 0, x: "" },
+    { n: "White Tee", c: "#f2f5ff", p: 90, x: "tshirt" },
+    { n: "Red Tee", c: "#e8503a", p: 90, x: "tshirt" },
+    { n: "Tank Top", c: "#4df0ff", p: 110, x: "tank" },
+    { n: "Half Sleeve", c: "#ffd24d", p: 130, x: "halfsleeve" },
+    { n: "Navy Hoodie", c: "#2b3566", p: 210, x: "hoodie" },
+    { n: "Mint Hoodie", c: "#4dff9e", p: 230, x: "hoodie" },
+    { n: "Violet Hoodie", c: "#b46bff", p: 260, x: "hoodie" },
+  ]);
+  add("legs", "stickman", [
+    { n: "Bare Legs", c: null, p: 0, x: "" },
+    { n: "Blue Jeans", c: "#3a5a9e", p: 100, x: "pants" },
+    { n: "Black Pants", c: "#22283f", p: 100, x: "pants" },
+    { n: "Cargo Shorts", c: "#7a6a3a", p: 120, x: "shorts" },
+    { n: "Sport Shorts", c: "#e8503a", p: 120, x: "shorts" },
+    { n: "Pleat Skirt", c: "#ff5b8a", p: 150, x: "skirt" },
+    { n: "Denim Skirt", c: "#5a7ab8", p: 150, x: "skirt" },
   ]);
 
   add("stack", "cube", [
     { n: "Ice Slabs", c: "#4dc4ff", p: 0 }, { n: "Amber Slabs", c: "#ffb84d", p: 90 },
     { n: "Violet Slabs", c: "#b46bff", p: 130 },
   ]);
+  // Hair STYLE and hair COLOUR are chosen separately.
   add("hair", "stickman", [
     { n: "Bald", c: null, p: 0, x: "" },
-    { n: "Spiky Hair", c: "#3a2a1a", p: 90, x: "spiky" },
-    { n: "Bowl Cut", c: "#c9954f", p: 110, x: "bowl" },
-    { n: "Ponytail", c: "#6b3a1a", p: 130, x: "pony" },
-    { n: "Big Afro", c: "#2a1a12", p: 170, x: "afro" },
-    { n: "Neon Mohawk", c: "#4df0ff", p: 220, x: "mohawk" },
+    { n: "Short Cut", c: "#241a12", p: 70, x: "short" },
+    { n: "With Bangs", c: "#241a12", p: 90, x: "bangs" },
+    { n: "Spikes", c: "#241a12", p: 110, x: "spikes" },
+    { n: "Ponytail", c: "#241a12", p: 130, x: "pony" },
+    { n: "Ponytail + Bangs", c: "#241a12", p: 150, x: "ponyBangs" },
+    { n: "Bob Cut", c: "#241a12", p: 150, x: "bob" },
+    { n: "Big Afro", c: "#241a12", p: 190, x: "afro" },
+    { n: "Mohawk", c: "#241a12", p: 220, x: "mohawk" },
+  ]);
+  add("haircol", "haircolor", [
+    { n: "Black", c: "#241a12", p: 0 },
+    { n: "Brown", c: "#6b3a1a", p: 60 },
+    { n: "Blonde", c: "#e8c46a", p: 80 },
+    { n: "Ginger", c: "#d4602a", p: 90 },
+    { n: "Silver", c: "#c8d2e6", p: 120 },
+    { n: "Neon Cyan", c: "#4df0ff", p: 180 },
+    { n: "Hot Pink", c: "#ff5bd0", p: 180 },
+    { n: "Toxic Green", c: "#7dff4d", p: 200 },
   ]);
 
   window.SHOP_ITEMS = I;
 
   // Equipped stickman look, used by every game via Art.stickman defaults.
+  const eq = (game) => window.SHOP_ITEMS.find((i) => i.game === game && Eng.isEquipped(i)) || {};
   window.stickmanStyle = function () {
-    const hatItem = window.SHOP_ITEMS.find((i) => i.game === "hat" && Eng.isEquipped(i)) || {};
-    const bodyItem = window.SHOP_ITEMS.find((i) => i.game === "body" && Eng.isEquipped(i)) || {};
-    const hairItem = window.SHOP_ITEMS.find((i) => i.game === "hair" && Eng.isEquipped(i)) || {};
+    const hat = eq("hat"), top = eq("top"), legs = eq("legs");
+    const hair = eq("hair"), hc = eq("haircol");
     return {
-      hat: hatItem.extra || "", hatColor: hatItem.color,
-      shirt: bodyItem.color || null,
-      hair: hairItem.extra || "", hairColor: hairItem.color,
+      hat: hat.extra || "", hatColor: hat.color,
+      top: top.extra || "", topColor: top.color || null,
+      legs: legs.extra || "", legsColor: legs.color || null,
+      hair: hair.extra || "", hairColor: hc.color || "#241a12",
     };
   };
 })();
