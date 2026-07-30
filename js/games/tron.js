@@ -16,11 +16,13 @@
       const { W, H, input } = env;
       const N = env.players, CELL = 20, COLS = Math.floor(W / CELL), ROWS = Math.floor(H / CELL);
       const STEP = 0.075, TARGET = 5;
+      // pinwheel spawns — each cycle runs away from the next, so nobody is on an
+      // instant head-on course (P3/P4 used to share a column and crash at once)
       const starts = [
-        { x: 8, y: (ROWS / 2) | 0, dx: 1, dy: 0 },
-        { x: COLS - 9, y: (ROWS / 2) | 0, dx: -1, dy: 0 },
-        { x: (COLS / 2) | 0, y: 6, dx: 0, dy: 1 },
-        { x: (COLS / 2) | 0, y: ROWS - 7, dx: 0, dy: -1 },
+        { x: 6, y: 5, dx: 1, dy: 0 },                  // top-left  → right
+        { x: COLS - 7, y: 5, dx: 0, dy: 1 },           // top-right → down
+        { x: COLS - 7, y: ROWS - 6, dx: -1, dy: 0 },   // bot-right → left
+        { x: 6, y: ROWS - 6, dx: 0, dy: -1 },          // bot-left  → up
       ];
       let players, grid, timer, roundT, matchOver, msg;
       const results = Eng.Results();
@@ -102,18 +104,36 @@
         for (let x = 0; x <= COLS; x++) { ctx.beginPath(); ctx.moveTo(x * CELL, 0); ctx.lineTo(x * CELL, ROWS * CELL); ctx.stroke(); }
         for (let y = 0; y <= ROWS; y++) { ctx.beginPath(); ctx.moveTo(0, y * CELL); ctx.lineTo(COLS * CELL, y * CELL); ctx.stroke(); }
 
+        // glowing light ribbons
         for (let i = 0; i < grid.length; i++) {
           const owner = grid[i];
           if (!owner) continue;
-          ctx.fillStyle = players[owner - 1].b.color;
-          ctx.globalAlpha = 0.55;
-          ctx.fillRect((i % COLS) * CELL + 1, ((i / COLS) | 0) * CELL + 1, CELL - 2, CELL - 2);
+          const c = players[owner - 1].b.color;
+          const gx = (i % COLS) * CELL, gy = ((i / COLS) | 0) * CELL;
+          ctx.fillStyle = c; ctx.globalAlpha = 0.22;
+          ctx.fillRect(gx, gy, CELL, CELL);
+          ctx.globalAlpha = 0.95;
+          ctx.fillRect(gx + CELL * 0.28, gy + CELL * 0.28, CELL * 0.44, CELL * 0.44);
         }
         ctx.globalAlpha = 1;
+        // bike heads with a headlight
         for (const p of players) {
           if (!p.alive) continue;
-          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 16;
-          ctx.fillRect(p.x * CELL, p.y * CELL, CELL, CELL); ctx.shadowBlur = 0;
+          const hx = p.x * CELL + CELL / 2, hy = p.y * CELL + CELL / 2;
+          ctx.fillStyle = p.b.color; ctx.shadowColor = p.b.color; ctx.shadowBlur = 26;
+          Eng.roundRect(ctx, hx - CELL * 0.42, hy - CELL * 0.42, CELL * 0.84, CELL * 0.84, 4);
+          ctx.fill();
+          ctx.shadowBlur = 0; ctx.fillStyle = "#fff";
+          ctx.beginPath();
+          ctx.arc(hx + p.dx * CELL * 0.24, hy + p.dy * CELL * 0.24, CELL * 0.15, 0, 7);
+          ctx.fill();
+          // forward beam
+          ctx.globalAlpha = 0.16; ctx.fillStyle = p.b.color;
+          ctx.beginPath();
+          ctx.moveTo(hx + p.dx * CELL * 0.5 - p.dy * CELL * 0.4, hy + p.dy * CELL * 0.5 + p.dx * CELL * 0.4);
+          ctx.lineTo(hx + p.dx * CELL * 0.5 + p.dy * CELL * 0.4, hy + p.dy * CELL * 0.5 - p.dx * CELL * 0.4);
+          ctx.lineTo(hx + p.dx * CELL * 3.2, hy + p.dy * CELL * 3.2);
+          ctx.closePath(); ctx.fill(); ctx.globalAlpha = 1;
         }
 
         const sw = Math.min(180, (W - 60) / players.length);

@@ -108,6 +108,10 @@
     { n: "Violet Vest", c: "#b46bff", p: 200, x: "shirt" },
   ]);
 
+  add("stack", "cube", [
+    { n: "Ice Slabs", c: "#4dc4ff", p: 0 }, { n: "Amber Slabs", c: "#ffb84d", p: 90 },
+    { n: "Violet Slabs", c: "#b46bff", p: 130 },
+  ]);
   add("hair", "stickman", [
     { n: "Bald", c: null, p: 0, x: "" },
     { n: "Spiky Hair", c: "#3a2a1a", p: 90, x: "spiky" },

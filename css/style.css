@@ -151,11 +151,11 @@ kbd {
 .grid {
   flex: 1;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-  gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(212px, 1fr));
+  gap: 20px;
   align-content: start;
   padding: 22px 0 12px;
-  max-width: 1100px;
+  max-width: 1180px;
   width: 100%;
   margin: 0 auto;
 }
@@ -167,15 +167,15 @@ kbd {
   background:
     radial-gradient(120% 80% at 50% -20%, color-mix(in srgb, var(--c) 26%, transparent), transparent 70%),
     linear-gradient(180deg, var(--bg2), #0e1426);
-  border-radius: 16px;
-  padding: 18px 16px 16px;
+  border-radius: 18px;
+  padding: 14px 15px 16px;
   color: var(--fg);
   cursor: pointer;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  min-height: 168px;
-  transition: transform 0.12s, box-shadow 0.12s, border-color 0.12s;
+  min-height: 236px;
+  transition: transform 0.14s, box-shadow 0.14s, border-color 0.14s;
 }
 .card:hover {
   transform: translateY(-4px);
@@ -184,18 +184,34 @@ kbd {
               0 0 0 1px var(--c, var(--accent)) inset,
               0 0 28px -6px var(--c, var(--accent));
 }
-.card .icon { font-size: 42px; line-height: 0; color: var(--c, var(--accent)); margin-bottom: 6px; }
-.card .icon svg {
-  width: 48px; height: 48px; display: block;
-  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--c) 55%, transparent));
+/* icon sits in a lit "art panel" at the top of the card */
+.card .icon {
+  display: grid; place-items: center;
+  width: 100%; height: 92px; margin: -4px 0 12px;
+  border-radius: 12px;
+  color: var(--c, var(--accent));
+  background:
+    radial-gradient(120% 130% at 50% 0%, color-mix(in srgb, var(--c) 34%, transparent), transparent 72%),
+    linear-gradient(180deg, rgba(255,255,255,0.07), rgba(0,0,0,0.28));
+  border: 1px solid color-mix(in srgb, var(--c) 26%, transparent);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.12);
+  overflow: hidden;
 }
+.card .icon svg {
+  width: 62px; height: 62px; display: block;
+  filter: drop-shadow(0 3px 6px rgba(0,0,0,0.55))
+          drop-shadow(0 0 14px color-mix(in srgb, var(--c) 60%, transparent));
+  transition: transform 0.16s ease;
+}
+.card:hover .icon svg { transform: scale(1.1) rotate(-3deg); }
 .card .name { font-size: 18px; font-weight: 800; }
 .card .desc { font-size: 12.5px; color: var(--muted); flex: 1; }
 .card .ctrl { font-size: 11px; color: #6b76a3; }
 .card .badge {
   position: absolute;
-  top: 12px;
-  right: 12px;
+  z-index: 2;
+  top: 22px;
+  right: 22px;
   font: 700 11px system-ui;
   padding: 3px 9px;
   border-radius: 999px;
