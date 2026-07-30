@@ -75,7 +75,7 @@
         const y = H * 0.62;
         const opts = {
           color: p.b.color, scale: 1.25, t: time, face: 1,
-          pose: drawn ? "throw" : "ready", hat: "cowboy", glow: won,
+          pose: drawn ? "throw" : "ready", glow: won,
         };
         Art.shadow(ctx, x, y + 2, 22);
         ctx.globalAlpha = p.out ? 0.35 : 1;

@@ -16,8 +16,8 @@
     create(env) {
       const { W, H, input } = env;
       const N = env.players;
-      const laneW = W / N, BH = 24, BASE_W = 118;
-      const FLOOR = H - 46, VIEW = 11;          // slabs visible before scrolling
+      const laneW = W / N, BH = 34, BASE_W = Math.min(150, laneW * 0.62);
+      const FLOOR = H - 40, VIEW = 9;           // taller slabs, visible before scrolling
       let players, matchOver, time = 0;
       const results = Eng.Results();
 

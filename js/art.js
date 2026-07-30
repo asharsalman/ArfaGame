@@ -334,6 +334,71 @@
     ctx.restore();
   };
 
+  /* A sumo wrestler seen from above-ish. Everyone shares the same skin; the
+     player's colour is only on the mawashi (belt), like the real thing. */
+  A.sumo = function (ctx, x, y, r, beltCol, lean, t, hit) {
+    const SKIN = "#e8b98f", SKIN_D = "#c9945f";
+    ctx.save(); ctx.translate(x, y);
+    const bob = Math.sin((t || 0) * 3) * 1.2;
+    ctx.translate(Math.cos(lean) * 3, Math.sin(lean) * 3 + bob);
+
+    // legs braced out to the sides
+    ctx.strokeStyle = OUT; ctx.lineWidth = r * 0.62 + 5; ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, r * 0.42); ctx.lineTo(-r * 0.82, r * 0.94);
+    ctx.moveTo(r * 0.42, r * 0.42); ctx.lineTo(r * 0.82, r * 0.94);
+    ctx.stroke();
+    ctx.strokeStyle = SKIN_D; ctx.lineWidth = r * 0.62;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.42, r * 0.42); ctx.lineTo(-r * 0.82, r * 0.94);
+    ctx.moveTo(r * 0.42, r * 0.42); ctx.lineTo(r * 0.82, r * 0.94);
+    ctx.stroke();
+
+    // arms reaching forward
+    const ax = Math.cos(lean), ay = Math.sin(lean);
+    ctx.strokeStyle = OUT; ctx.lineWidth = r * 0.5 + 5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 - ay * r * 0.55, ay * r * 1.15 + ax * r * 0.55);
+    ctx.moveTo(r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 + ay * r * 0.55, ay * r * 1.15 - ax * r * 0.55);
+    ctx.stroke();
+    ctx.strokeStyle = SKIN; ctx.lineWidth = r * 0.5;
+    ctx.beginPath();
+    ctx.moveTo(-r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 - ay * r * 0.55, ay * r * 1.15 + ax * r * 0.55);
+    ctx.moveTo(r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 + ay * r * 0.55, ay * r * 1.15 - ax * r * 0.55);
+    ctx.stroke();
+
+    // big round belly
+    ctx.fillStyle = hit ? "#fff" : SKIN;
+    ctx.strokeStyle = OUT; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.ellipse(0, 0, r, r * 0.98, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "rgba(255,255,255,0.16)";
+    ctx.beginPath(); ctx.ellipse(-r * 0.26, -r * 0.3, r * 0.42, r * 0.3, -0.5, 0, 7); ctx.fill();
+
+    // mawashi — the ONLY thing that differs between players
+    ctx.fillStyle = beltCol; ctx.strokeStyle = OUT; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.ellipse(0, r * 0.5, r * 0.95, r * 0.3, 0, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.beginPath();
+    ctx.rect(-r * 0.2, r * 0.42, r * 0.4, r * 0.62); ctx.fill(); ctx.stroke();
+
+    // head + topknot
+    ctx.fillStyle = SKIN; ctx.strokeStyle = OUT; ctx.lineWidth = 3.5;
+    ctx.beginPath(); ctx.arc(0, -r * 0.92, r * 0.44, 0, 7); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = "#241a14";
+    ctx.beginPath(); ctx.arc(0, -r * 1.08, r * 0.44, Math.PI, 0); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.ellipse(0, -r * 1.42, r * 0.2, r * 0.13, 0, 0, 7); ctx.fill(); ctx.stroke();
+    // face
+    ctx.fillStyle = OUT;
+    ctx.beginPath();
+    ctx.arc(-r * 0.15, -r * 0.92, r * 0.06, 0, 7);
+    ctx.arc(r * 0.15, -r * 0.92, r * 0.06, 0, 7); ctx.fill();
+    ctx.strokeStyle = OUT; ctx.lineWidth = 2;
+    ctx.beginPath();
+    if (hit) ctx.arc(0, -r * 0.72, r * 0.13, Math.PI, 0);
+    else ctx.arc(0, -r * 0.8, r * 0.14, 0.15 * Math.PI, 0.85 * Math.PI);
+    ctx.stroke();
+    ctx.restore();
+  };
+
   // ---- bowling pin (base at y) ----
   A.pin = function (ctx, x, y, s, down) {
     ctx.save(); ctx.translate(x, y); ctx.scale(s, s);

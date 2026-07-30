@@ -87,6 +87,16 @@
     document.getElementById("modeQuick").addEventListener("click", () => setMode("quick"));
     document.getElementById("modeCup").addEventListener("click", () => setMode("cup"));
     document.getElementById("cupNext").addEventListener("click", cupNext);
+    document.getElementById("homeBtn").addEventListener("click", showFront);
+    document.querySelectorAll(".frontnav .navbtn").forEach((b) => {
+      b.addEventListener("click", () => {
+        const go = b.dataset.go;
+        leaveFront();
+        if (go === "shop") openShop();
+        else setMode(go);
+      });
+    });
+    showFront();
 
     last = performance.now();
     requestAnimationFrame(loop);
@@ -127,6 +137,22 @@
     });
   }
 
+  // ---------- front page ----------
+  function showFront() {
+    dropFocus();
+    cup = null;
+    document.getElementById("chooser").hidden = true;
+    document.getElementById("cup").hidden = true;
+    document.getElementById("shop").hidden = true;
+    document.body.classList.add("onfront");
+    refreshCoins();
+    if (window.FrontPage) FrontPage.start();
+  }
+  function leaveFront() {
+    document.body.classList.remove("onfront");
+    if (window.FrontPage) FrontPage.stop();
+  }
+
   // ---------- modes ----------
   function setMode(m) {
     mode = m;
@@ -147,7 +173,7 @@
     box.innerHTML = "";
     for (let n = 1; n <= 4; n++) {
       const b = mkBtn(Eng.PLAYERS[n - 1].color, n, `player${n > 1 ? "s" : ""}`);
-      b.onclick = () => (n < 4 ? askRobots(n) : beginCup(4, 0));
+      b.onclick = () => (n < 4 ? askRobots(n) : askLength(4, 0));
       box.appendChild(b);
     }
     modal.hidden = false;
@@ -157,21 +183,37 @@
     document.getElementById("chooserHint").textContent =
       `${n} human${n > 1 ? "s" : ""} — fill the rest with robots?`;
     box.innerHTML = "";
-    const no = mkBtn(Eng.PLAYERS[n - 1].color, n, "just us");
-    no.onclick = () => beginCup(n, 0);
+    const no = mkBtn(Eng.PLAYERS[n - 1].color, n, n === 1 ? "solo (practice)" : "just us");
+    no.onclick = () => askLength(n, 0);
     box.appendChild(no);
     for (let r = 1; r <= 4 - n; r++) {
       const b = mkBtn("#9d7bff", "🤖" + r, `+${r} robot${r > 1 ? "s" : ""}`);
-      b.onclick = () => beginCup(n + r, r);
+      b.onclick = () => askLength(n + r, r);
       box.appendChild(b);
     }
   }
-  function beginCup(total, robots) {
+  // how long should the cup be?
+  function askLength(total, robots) {
+    const box = document.getElementById("chooserBtns");
+    document.getElementById("chooserHint").textContent = "How many games?";
+    box.innerHTML = "";
+    [[5, "short"], [8, "medium"], [9, "long"]].forEach(([n, label]) => {
+      const b = mkBtn("#ffd24d", n, label);
+      b.onclick = () => beginCup(total, robots, n);
+      box.appendChild(b);
+    });
+  }
+
+  function beginCup(total, robots, count) {
     hideChooser();
     const pool = GAMES.filter((g) => g.min <= total && g.max >= total && !g.selfSelect);
     const picks = [];
-    const bag = pool.slice();
-    for (let i = 0; i < 5 && bag.length; i++) picks.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    let bag = pool.slice();
+    for (let i = 0; i < count; i++) {
+      if (!bag.length) bag = pool.slice();                  // reshuffle if we run out
+      if (!bag.length) break;
+      picks.push(bag.splice(Math.floor(Math.random() * bag.length), 1)[0]);
+    }
     cup = {
       total, robots, games: picks, round: 0,
       points: Object.fromEntries(Eng.PLAYERS.slice(0, total).map((p) => [p.id, 0])),
@@ -183,10 +225,13 @@
   function showCupBoard(first) {
     const modal = document.getElementById("cup");
     const done = cup.round >= cup.games.length;
-    document.getElementById("cupTitle").textContent = done ? "🏆 Champion!" : "Tournament";
+    const solo = cup.total === 1;
+    document.getElementById("cupTitle").textContent =
+      done ? (solo ? "Run complete" : "🏆 Champion!") : (solo ? "Solo run" : "Tournament");
     document.getElementById("cupHint").textContent = done
-      ? `${champion().name} wins the cup!`
-      : `Game ${cup.round + 1} of ${cup.games.length} — ${cup.games[cup.round].name}`;
+      ? (solo ? "Practice run finished — no title with one player." : `${champion().name} wins the cup!`)
+      : `Game ${cup.round + 1} of ${cup.games.length} — ${cup.games[cup.round].name}`
+        + (solo ? "  ·  practice, nothing to win" : "");
 
     const board = document.getElementById("cupBoard");
     board.innerHTML = "";
@@ -211,7 +256,7 @@
   }
   function cupNext() {
     document.getElementById("cup").hidden = true;
-    if (cup.round >= cup.games.length) { cup = null; setMode("quick"); return; }
+    if (cup.round >= cup.games.length) { cup = null; showFront(); return; }
     const def = cup.games[cup.round];
     launch(def, cup.total, cup.robots ? { diff: "normal" } : null);
   }
@@ -292,11 +337,16 @@
   const COIN_SM = `<span class="mcoin sm">M</span>`;
   function refreshCoins() {
     const c = `${COIN}${Eng.coins()}`;
-    const a = document.getElementById("coinBal"); if (a) a.innerHTML = c;
-    const b = document.getElementById("shopCoins"); if (b) b.innerHTML = c;
+    ["coinBal", "shopCoins", "coinBalFront"].forEach((id) => {
+      const el = document.getElementById(id); if (el) el.innerHTML = c;
+    });
   }
   function openShop() { buildShop(); refreshCoins(); document.getElementById("shop").hidden = false; }
-  function closeShop() { document.getElementById("shop").hidden = true; refreshCoins(); }
+  function closeShop() {
+    document.getElementById("shop").hidden = true;
+    refreshCoins();
+    if (!document.body.classList.contains("playing")) showFront();
+  }
   function buildShop() {
     const grid = document.getElementById("shopGrid");
     grid.innerHTML = "";
@@ -466,6 +516,10 @@
 
   function launch(def, count, bot) {
     dropFocus();
+    // make sure no overlay is left covering the canvas
+    leaveFront();
+    document.getElementById("shop").hidden = true;
+    document.getElementById("chooser").hidden = true;
     // don't let the click/keypress that started the game leak into its first frame
     input.justP = {};
     input.pointer.pressed = false;

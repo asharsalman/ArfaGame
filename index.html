@@ -7,6 +7,32 @@
   <link rel="stylesheet" href="css/style.css" />
 </head>
 <body>
+  <!-- FRONT PAGE -->
+  <div id="front">
+    <div class="wallet">
+      <span id="coinBalFront" class="coinbal"></span>
+    </div>
+    <div class="front-hero">
+      <h1 class="logo front-logo">GAMES</h1>
+      <p class="tagline">Grab up to 3 friends. One screen. 20 mini-games.</p>
+    </div>
+    <canvas id="frontStage" width="960" height="330"></canvas>
+    <nav class="frontnav">
+      <button class="navbtn" data-go="quick">
+        <span class="navico">▶</span><span class="navlbl">QUICK MATCH</span>
+        <span class="navsub">Pick a game &amp; play</span>
+      </button>
+      <button class="navbtn" data-go="cup">
+        <span class="navico">🏆</span><span class="navlbl">TOURNAMENT</span>
+        <span class="navsub">Series &middot; most points wins</span>
+      </button>
+      <button class="navbtn" data-go="shop">
+        <span class="navico">🛍</span><span class="navlbl">SHOP</span>
+        <span class="navsub">Skins &amp; accessories</span>
+      </button>
+    </nav>
+  </div>
+
   <!-- MENU -->
   <div id="menu">
     <div class="wallet">
@@ -17,13 +43,17 @@
       <h1 class="logo">GAMES</h1>
       <p class="tagline">Mini-game arcade &mdash; grab a friend &amp; pick one</p>
       <div class="modes">
+        <button id="homeBtn" class="modebtn">
+          <span class="mtitle">&larr; HOME</span>
+          <span class="msub">Front page</span>
+        </button>
         <button id="modeQuick" class="modebtn active">
           <span class="mtitle">QUICK MATCH</span>
           <span class="msub">Pick one game &amp; play</span>
         </button>
         <button id="modeCup" class="modebtn">
           <span class="mtitle">TOURNAMENT</span>
-          <span class="msub">5 games &middot; most points wins</span>
+          <span class="msub">Series &middot; most points wins</span>
         </button>
       </div>
       <nav id="tabs" class="tabs"></nav>
@@ -84,6 +114,7 @@
   <script src="js/engine.js"></script>
   <script src="js/art.js"></script>
   <script src="js/shop.js"></script>
+  <script src="js/front.js"></script>
   <script src="js/hub.js"></script>
   <script src="js/games/geometrydash.js"></script>
   <script src="js/games/pong.js"></script>

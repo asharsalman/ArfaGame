@@ -113,9 +113,39 @@
           if (Math.abs(vx) > 8) ch.face = vx > 0 ? 1 : -1;
           ch.x = clamp(ch.x + vx * dt, AX0, AX1); ch.y = clamp(ch.y + vy * dt, AY0, AY1);
           for (const p of players) {
+            // one chicken at a time — you have to run it home before grabbing another
+            if (p.carried.length) continue;
             if (dist(p.x, p.y, ch.x, ch.y) < PR + CR) { ch.state = "carried"; p.carried.push(ch); break; }
           }
         }
+      }
+
+      // classic red-brown post-and-rail fence right round the field
+      function drawFence(ctx) {
+        const WOOD = "#8a4a2a", WOOD_D = "#5e2f18", RAIL = "#a35a30";
+        const post = (px, py) => {
+          ctx.fillStyle = WOOD_D; ctx.fillRect(px - 6, py - 20, 12, 40);
+          ctx.fillStyle = WOOD; ctx.fillRect(px - 5, py - 19, 10, 38);
+          ctx.fillStyle = "rgba(255,255,255,0.14)"; ctx.fillRect(px - 5, py - 19, 3, 38);
+          ctx.fillStyle = WOOD_D;
+          ctx.beginPath(); ctx.moveTo(px - 6, py - 20); ctx.lineTo(px, py - 27); ctx.lineTo(px + 6, py - 20); ctx.fill();
+        };
+        const railH = (x0, x1, y) => {
+          [-7, 6].forEach((o) => {
+            ctx.fillStyle = WOOD_D; ctx.fillRect(x0, y + o - 1, x1 - x0, 8);
+            ctx.fillStyle = RAIL; ctx.fillRect(x0, y + o, x1 - x0, 6);
+          });
+        };
+        const railV = (y0, y1, x) => {
+          [-7, 6].forEach((o) => {
+            ctx.fillStyle = WOOD_D; ctx.fillRect(x + o - 1, y0, 8, y1 - y0);
+            ctx.fillStyle = RAIL; ctx.fillRect(x + o, y0, 6, y1 - y0);
+          });
+        };
+        railH(M, W - M, M); railH(M, W - M, H - M);
+        railV(M, H - M, M); railV(M, H - M, W - M);
+        for (let x = M; x <= W - M; x += 72) { post(x, M); post(x, H - M); }
+        for (let y = M; y <= H - M; y += 72) { post(M, y); post(W - M, y); }
       }
 
       function drawChicken(ctx, ch, s) {
@@ -124,12 +154,22 @@
       }
 
       function render(ctx) {
-        ctx.fillStyle = "#244a22"; ctx.fillRect(0, 0, W, H);
-        // grass stripes
-        ctx.fillStyle = "#1f4220";
-        for (let y = 0; y < H; y += 40) ctx.fillRect(0, y, W, 20);
-        // fence border
-        ctx.strokeStyle = "#caa15a"; ctx.lineWidth = 6; ctx.strokeRect(M, M, W - 2 * M, H - 2 * M);
+        // grass field
+        ctx.fillStyle = "#2f6b2c"; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = "#2a6128";
+        for (let y = 0; y < H; y += 44) ctx.fillRect(0, y, W, 22);
+        // tufts of grass instead of a grid
+        ctx.strokeStyle = "rgba(120,200,110,0.45)"; ctx.lineWidth = 2; ctx.lineCap = "round";
+        for (let i = 0; i < 150; i++) {
+          const gx = ((i * 137.5) % (W - 80)) + 40;
+          const gy = ((i * 91.7) % (H - 80)) + 40;
+          const s = 4 + ((i * 7) % 4);
+          ctx.beginPath();
+          ctx.moveTo(gx, gy); ctx.lineTo(gx - 2, gy - s);
+          ctx.moveTo(gx, gy); ctx.lineTo(gx + 2, gy - s + 1);
+          ctx.stroke();
+        }
+        drawFence(ctx);
 
         // pens — dirt floor with a post-and-rail fence
         for (const p of players) {
@@ -166,8 +206,9 @@
           Art.shadow(ctx, p.x, feet, 16);
           Art.stickman(ctx, p.x, feet, {
             color: p.b.color, scale: 0.95, t: time,
+            // no forced hat — whatever the player equipped in the shop stays on
             pose: p.moving ? "run" : (p.carried.length ? "carry" : "idle"),
-            face: p.face || 1, hat: "cowboy", hatColor: "#6b4a2a",
+            face: p.face || 1,
           });
         }
 

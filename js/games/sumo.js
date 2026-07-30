@@ -16,7 +16,7 @@
       const { W, H, input } = env;
       const N = env.players;
       const CXR = W / 2, CYR = H / 2 + 6, RING = 226, PR = 34, TARGET = 5;
-      let players, roundActive, roundT, msg, matchOver;
+      let players, roundActive, roundT, msg, matchOver, time = 0;
       const results = Eng.Results();
       function endMatch() {
         const rank = [...players].sort((a, b) => b.score - a.score).map((p) => ({ b: p.b, score: p.score }));
@@ -40,6 +40,8 @@
       reset();
 
       function update(dt) {
+        time += dt;
+        for (const p of players) if (p.hit > 0) p.hit -= dt;
         if (matchOver) { if (results.update(dt, input)) reset(); return; }
         if (roundT > 0) {
           roundT -= dt;
@@ -72,6 +74,7 @@
               const av = a.vx * nx + a.vy * ny, bv = b.vx * nx + b.vy * ny, diff = bv - av;
               a.vx += nx * diff; a.vy += ny * diff;
               b.vx -= nx * diff; b.vy -= ny * diff;
+              if (Math.abs(diff) > 90) { a.hit = 0.25; b.hit = 0.25; }   // grimace on impact
             }
           }
 
@@ -100,31 +103,11 @@
 
         for (const p of players) {
           if (!p.alive) continue;
-          const lean = Math.atan2(p.vy, p.vx), spd = Math.min(1, Math.hypot(p.vx, p.vy) / 340);
-          Art.shadow(ctx, p.x, p.y + PR - 2, PR * 0.9, 0.3);
-          // round sumo body
-          ctx.save();
-          ctx.translate(p.x + Math.cos(lean) * spd * 4, p.y + Math.sin(lean) * spd * 4);
-          ctx.fillStyle = p.b.color; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 4;
-          ctx.beginPath(); ctx.arc(0, 0, PR, 0, 7); ctx.fill(); ctx.stroke();
-          // belt
-          ctx.fillStyle = "rgba(0,0,0,0.28)";
-          ctx.beginPath(); ctx.ellipse(0, PR * 0.42, PR * 0.92, PR * 0.24, 0, 0, 7); ctx.fill();
-          // face
-          ctx.fillStyle = "#fdfdff"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 3;
-          ctx.beginPath(); ctx.arc(-9, -6, 7, 0, 7); ctx.fill(); ctx.stroke();
-          ctx.beginPath(); ctx.arc(9, -6, 7, 0, 7); ctx.fill(); ctx.stroke();
-          ctx.fillStyle = Art.OUT;
-          ctx.beginPath();
-          ctx.arc(-9 + Math.cos(lean) * 2.4, -6 + Math.sin(lean) * 2.4, 3, 0, 7);
-          ctx.arc(9 + Math.cos(lean) * 2.4, -6 + Math.sin(lean) * 2.4, 3, 0, 7);
-          ctx.fill();
-          ctx.lineWidth = 3; ctx.strokeStyle = Art.OUT;
-          ctx.beginPath(); ctx.arc(0, 8, 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
-          // topknot
-          ctx.fillStyle = Art.OUT;
-          ctx.beginPath(); ctx.ellipse(0, -PR + 2, 6, 4.5, 0, 0, 7); ctx.fill();
-          ctx.restore();
+          const moving = Math.hypot(p.vx, p.vy) > 12;
+          const lean = moving ? Math.atan2(p.vy, p.vx) : (p.lastLean || 0);
+          if (moving) p.lastLean = lean;
+          Art.shadow(ctx, p.x, p.y + PR * 0.95, PR * 0.95, 0.32);
+          Art.sumo(ctx, p.x, p.y, PR, p.b.color, lean, time, p.hit > 0);
         }
 
         // scoreboard
