@@ -45,6 +45,7 @@
     spinners: IDEF + `<ellipse cx="24" cy="43" rx="13" ry="3" fill="currentColor" opacity=".2"/><path d="M24 7 l14 8 v17 l-14 8 -14-8 V15z" fill="currentColor"/><path d="M24 7 l14 8 v17 l-14 8 -14-8 V15z" fill="url(#ig)"/><circle cx="24" cy="23" r="7" fill="#fdfdff"/><circle cx="21.5" cy="22" r="1.7" fill="#0b0e1a"/><circle cx="26.5" cy="22" r="1.7" fill="#0b0e1a"/><path d="M21 26 a3.4 3.4 0 0 0 6 0" fill="none" stroke="#0b0e1a" stroke-width="1.6" stroke-linecap="round"/>`,
     volleyball: IDEF + `<circle cx="24" cy="24" r="17" fill="#f2f5ff"/><circle cx="24" cy="24" r="17" fill="url(#ig)"/><path d="M8 20 q16 -3 32 4 M15 40 q6 -18 -3 -30 M33 40 q-6 -18 3 -30" fill="none" stroke="currentColor" stroke-width="2.6"/>`,
     bowling: IDEF + `<path d="M14 34 q-5 -7 -2 -15 q1.6 -7 4 -12 q2.4 5 4 12 q3 8 -2 15z" fill="#f7f9ff"/><path d="M14 34 q-5 -7 -2 -15 q1.6 -7 4 -12 q2.4 5 4 12 q3 8 -2 15z" fill="url(#ig)"/><ellipse cx="16" cy="16" rx="4.4" ry="1.6" fill="#ff4d4d"/><ellipse cx="16" cy="20" rx="5" ry="1.6" fill="#ff4d4d"/><circle cx="33" cy="31" r="12" fill="currentColor"/><circle cx="33" cy="31" r="12" fill="url(#ig)"/><circle cx="30" cy="27" r="2.1" fill="#0b0e1a"/><circle cx="36" cy="27" r="2.1" fill="#0b0e1a"/><circle cx="32.5" cy="34" r="2.1" fill="#0b0e1a"/>`,
+    racing: IDEF + `<ellipse cx="24" cy="41" rx="18" ry="4" fill="currentColor" opacity=".2"/><rect x="6" y="26" width="10" height="8" rx="2.5" fill="#1a1d2a"/><rect x="32" y="26" width="10" height="8" rx="2.5" fill="#1a1d2a"/><rect x="6" y="12" width="10" height="8" rx="2.5" fill="#1a1d2a"/><rect x="32" y="12" width="10" height="8" rx="2.5" fill="#1a1d2a"/><path d="M14 9 h20 l5 8 v14 l-5 8 H14 l-5-8 V17z" fill="currentColor"/><path d="M14 9 h20 l5 8 v14 l-5 8 H14 l-5-8 V17z" fill="url(#ig)"/><rect x="16" y="21" width="16" height="6" rx="2" fill="#10131f"/><circle cx="24" cy="24" r="4.6" fill="#f2f5ff"/><rect x="18" y="4" width="12" height="5" rx="2" fill="#2a2f42"/>`,
     stack: IDEF + `<rect x="10" y="34" width="28" height="9" rx="2.5" fill="currentColor"/><rect x="10" y="34" width="28" height="9" rx="2.5" fill="url(#ib)"/><rect x="13" y="24" width="24" height="9" rx="2.5" fill="currentColor" opacity=".85"/><rect x="13" y="24" width="24" height="9" rx="2.5" fill="url(#ib)"/><rect x="16" y="14" width="19" height="9" rx="2.5" fill="currentColor" opacity=".7"/><rect x="16" y="14" width="19" height="9" rx="2.5" fill="url(#ib)"/><rect x="20" y="4" width="15" height="9" rx="2.5" fill="#f2f5ff"/><rect x="20" y="4" width="15" height="9" rx="2.5" fill="url(#ig)"/>`,
     memory: IDEF + `<rect x="4" y="8" width="19" height="27" rx="3.5" transform="rotate(-8 13.5 21.5)" fill="currentColor" opacity=".35"/><rect x="4" y="8" width="19" height="27" rx="3.5" transform="rotate(-8 13.5 21.5)" fill="none" stroke="currentColor" stroke-width="2.2"/><rect x="25" y="13" width="19" height="27" rx="3.5" transform="rotate(7 34.5 26.5)" fill="#f2f5ff"/><rect x="25" y="13" width="19" height="27" rx="3.5" transform="rotate(7 34.5 26.5)" fill="url(#ig)"/><circle cx="34.5" cy="26.5" r="5.5" fill="currentColor"/>`,
   };
@@ -258,7 +259,7 @@
     document.getElementById("cup").hidden = true;
     if (cup.round >= cup.games.length) { cup = null; showFront(); return; }
     const def = cup.games[cup.round];
-    launch(def, cup.total, cup.robots ? { diff: "normal" } : null);
+    go(def, cup.total, cup.robots ? { diff: "normal" } : null);
   }
   // called when a game reports its final ranking
   function cupRecord(ranking) {
@@ -274,10 +275,12 @@
   GameHub.cupRecord = cupRecord;
 
   // ---------- chooser (player count + optional CPU difficulty) ----------
+  const go = (def, count, bot) => brief(def, count, bot, () => launch(def, count, bot));
+
   function choose(def) {
-    if (def.selfSelect) { launch(def, def.min, null); return; }
+    if (def.selfSelect) { go(def, def.min, null); return; }
     const needCount = def.max > def.min;
-    if (!needCount && !def.cpu) { launch(def, def.min, null); return; }
+    if (!needCount && !def.cpu) { go(def, def.min, null); return; }
 
     const modal = document.getElementById("chooser");
     document.getElementById("chooserTitle").textContent = def.name;
@@ -288,7 +291,7 @@
       document.getElementById("chooserHint").textContent = "How many players?";
       for (let n = def.min; n <= def.max; n++) {
         const b = mkBtn(Eng.PLAYERS[n - 1].color, n, `player${n > 1 ? "s" : ""}`);
-        b.onclick = () => { hideChooser(); launch(def, n, null); };
+        b.onclick = () => { hideChooser(); go(def, n, null); };
         box.appendChild(b);
       }
       if (def.cpu) {
@@ -300,11 +303,11 @@
       // 2-player game: choose human or CPU difficulty
       document.getElementById("chooserHint").textContent = "Choose your opponent";
       const h = mkBtn(Eng.PLAYERS[1].color, "2", "players");
-      h.onclick = () => { hideChooser(); launch(def, 2, null); };
+      h.onclick = () => { hideChooser(); go(def, 2, null); };
       box.appendChild(h);
       ["Easy", "Normal", "Hard"].forEach((d) => {
         const b = mkBtn("#9d7bff", "🤖", d);
-        b.onclick = () => { hideChooser(); launch(def, 2, { diff: d.toLowerCase() }); };
+        b.onclick = () => { hideChooser(); go(def, 2, { diff: d.toLowerCase() }); };
         box.appendChild(b);
       });
     }
@@ -316,7 +319,7 @@
     box.innerHTML = "";
     ["Easy", "Normal", "Hard"].forEach((d) => {
       const b = mkBtn("#9d7bff", "🤖", d);
-      b.onclick = () => { hideChooser(); launch(def, def.max, { diff: d.toLowerCase() }); };
+      b.onclick = () => { hideChooser(); go(def, def.max, { diff: d.toLowerCase() }); };
       box.appendChild(b);
     });
   }
@@ -485,6 +488,46 @@
         c.beginPath(); c.arc(-3, -2.5, 1.7, 0, 7); c.arc(3, -2.5, 1.7, 0, 7); c.fill();
         c.restore(); break;
       }
+      case "racecar": {
+        const bodyC = col || "#8fa4d6";
+        c.save(); c.translate(cx, cy);
+        c.fillStyle = "#1a1d2a";
+        [[-18, -17], [-18, 17], [20, -17], [20, 17]].forEach(([wx, wy]) => {
+          Eng.roundRect(c, wx - 7, wy - 6, 15, 12, 3); c.fill();
+        });
+        c.fillStyle = bodyC; c.strokeStyle = Art.OUT; c.lineWidth = 3;
+        c.beginPath();
+        c.moveTo(-32, -16); c.lineTo(18, -16); c.lineTo(36, -7);
+        c.lineTo(36, 7); c.lineTo(18, 16); c.lineTo(-32, 16);
+        c.closePath(); c.fill(); c.stroke();
+        if (it.extra === "stripe") { c.fillStyle = "rgba(255,255,255,0.78)"; c.fillRect(-29, -5, 60, 10); }
+        c.fillStyle = "#2a2f42"; c.strokeStyle = Art.OUT; c.lineWidth = 2.5;
+        Eng.roundRect(c, -38, -19, 8, 38, 3); c.fill(); c.stroke();
+        c.fillStyle = "#10131f"; c.beginPath(); c.ellipse(0, 0, 13, 11, 0, 0, 7); c.fill();
+        c.fillStyle = "#8fa4d6"; c.strokeStyle = Art.OUT; c.lineWidth = 2.4;
+        c.beginPath(); c.arc(0, -1, 8, 0, 7); c.fill(); c.stroke();
+        c.fillStyle = "rgba(255,255,255,0.85)";
+        c.beginPath(); c.arc(0, -3, 4.4, Math.PI * 0.1, Math.PI * 0.9); c.fill();
+        c.restore(); break;
+      }
+      case "table": {
+        c.fillStyle = col; c.fillRect(0, 0, W2, H2);
+        c.strokeStyle = "rgba(255,255,255,0.35)"; c.lineWidth = 3;
+        c.strokeRect(16, 10, W2 - 32, H2 - 20);
+        c.beginPath(); c.moveTo(16, H2 / 2); c.lineTo(W2 - 16, H2 / 2); c.stroke();
+        c.beginPath(); c.arc(cx, H2 / 2, 20, 0, 7); c.stroke();
+        c.fillStyle = "#fff"; c.beginPath(); c.arc(cx, H2 / 2, 7, 0, 7); c.fill();
+        break;
+      }
+      case "slab": {
+        [0, 1, 2].forEach((k) => {
+          const w = 96 - k * 16, y = cy + 24 - k * 24;
+          c.fillStyle = col; Eng.roundRect(c, cx - w / 2, y, w, 20, 5); c.fill();
+          c.fillStyle = "rgba(255,255,255,0.24)"; Eng.roundRect(c, cx - w / 2, y, w, 6, 3); c.fill();
+          c.fillStyle = "rgba(0,0,0,0.22)"; Eng.roundRect(c, cx - w / 2, y + 14, w, 5, 3); c.fill();
+        });
+        break;
+      }
       case "ring":
         c.strokeStyle = col; c.lineWidth = 9; c.shadowColor = col; c.shadowBlur = 22;
         c.beginPath(); c.arc(cx, cy, 40, 0, 7); c.stroke(); c.shadowBlur = 0;
@@ -553,12 +596,54 @@
     if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
   }
 
+  // Show what each player presses, then start on any key/click.
+  function brief(def, count, bot, go) {
+    dropFocus();
+    leaveFront();
+    document.getElementById("shop").hidden = true;
+    document.getElementById("chooser").hidden = true;
+    document.getElementById("briefTitle").textContent = def.name;
+    document.getElementById("briefDesc").textContent = def.desc || "";
+    const rows = document.getElementById("briefRows");
+    rows.innerHTML = "";
+    const KEY = { Space: "Space", Enter: "Enter", KeyB: "B", KeyO: "O" };
+    const humans = count - (bot ? 1 : 0);
+    for (let i = 0; i < count; i++) {
+      const b = Eng.PLAYERS[i];
+      const isBot = bot && i >= humans;
+      const row = document.createElement("div");
+      row.className = "briefrow"; row.style.setProperty("--c", b.color);
+      row.innerHTML = isBot
+        ? `<span class="bname">🤖 ${b.name}</span><span class="bkeys">CPU (${bot.diff})</span>`
+        : `<span class="bname">${b.name}</span><span class="bkeys">${b.keys.replace("+", "·")}
+             <em>${KEY[b.action] || ""}</em></span>`;
+      rows.appendChild(row);
+    }
+    const extra = document.createElement("p");
+    extra.className = "hint";
+    extra.textContent = def.controls || "";
+    rows.appendChild(extra);
+
+    const modal = document.getElementById("brief");
+    modal.hidden = false;
+    const start = (e) => {
+      if (e && e.type === "keydown" && e.code === "Escape") return;
+      window.removeEventListener("keydown", start);
+      modal.removeEventListener("click", start);
+      modal.hidden = true;
+      go();
+    };
+    window.addEventListener("keydown", start);
+    modal.addEventListener("click", start);
+  }
+
   function launch(def, count, bot) {
     dropFocus();
     // make sure no overlay is left covering the canvas
     leaveFront();
     document.getElementById("shop").hidden = true;
     document.getElementById("chooser").hidden = true;
+    document.getElementById("brief").hidden = true;
     // don't let the click/keypress that started the game leak into its first frame
     input.justP = {};
     input.pointer.pressed = false;

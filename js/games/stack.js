@@ -20,6 +20,17 @@
       const FLOOR = H - 40, VIEW = 9;           // taller slabs, visible before scrolling
       let players, matchOver, time = 0;
       const results = Eng.Results();
+      // slab skin -> a base hue the tower shifts through as it climbs
+      const baseHue = (function () {
+        const c = Eng.skinColor("stack", "#4dc4ff");
+        const m = /^#(\w\w)(\w\w)(\w\w)$/.exec(c);
+        if (!m) return 196;
+        const r = parseInt(m[1], 16) / 255, g = parseInt(m[2], 16) / 255, b = parseInt(m[3], 16) / 255;
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx - mn;
+        if (!d) return 196;
+        let h = mx === r ? ((g - b) / d) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+        return ((h * 60) + 360) % 360;
+      })();
 
       function makePlayer(b, i) {
         return {
@@ -96,7 +107,7 @@
       function render(ctx) {
         for (let i = 0; i < N; i++) {
           const p = players[i], x0 = laneW * i;
-          const hue = (196 + p.slabs.length * 9) % 360;
+          const hue = (baseHue + p.slabs.length * 9) % 360;
           const g = ctx.createLinearGradient(0, 0, 0, H);
           g.addColorStop(0, `hsl(${hue},48%,17%)`); g.addColorStop(1, "#080c18");
           ctx.fillStyle = g; ctx.fillRect(x0, 0, laneW, H);
@@ -110,7 +121,7 @@
           p.slabs.forEach((s, k) => {
             const y = FLOOR - (k + 1) * BH + scroll;
             if (y < -BH || y > H) return;
-            slab(ctx, p.cx, y, s, `hsl(${(196 + k * 9) % 360},72%,${s.perfect ? 68 : 56}%)`, s.perfect);
+            slab(ctx, p.cx, y, s, `hsl(${(baseHue + k * 9) % 360},72%,${s.perfect ? 68 : 56}%)`, s.perfect);
           });
           // falling offcuts
           for (const ch of p.chips) {
@@ -121,7 +132,7 @@
           // the sliding slab
           if (p.alive) {
             const y = FLOOR - (p.slabs.length + 1) * BH + scroll;
-            slab(ctx, p.cx, y, p.cur, `hsl(${(196 + p.slabs.length * 9) % 360},85%,66%)`, true);
+            slab(ctx, p.cx, y, p.cur, `hsl(${(baseHue + p.slabs.length * 9) % 360},85%,66%)`, true);
           } else {
             text(ctx, "TOPPLED", p.cx, H / 2, { font: "900 26px system-ui", color: "#ff5b8a", glow: "#ff5b8a" });
           }

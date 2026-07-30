@@ -152,12 +152,17 @@
         ctx.save();
         ctx.fillStyle = "rgba(4,6,15,0.9)"; ctx.fillRect(0, 0, W, H);
         const win = ranking[0];
+        const solo = ranking.length < 2;
         const pop = Math.min(1, t * 3);
-        trophy(ctx, W / 2, 86, win.b.color);
+        if (!solo) trophy(ctx, W / 2, 86, win.b.color);
         ctx.save();
-        ctx.translate(W / 2, 158); ctx.scale(0.85 + pop * 0.15, 0.85 + pop * 0.15);
-        Eng.text(ctx, `${win.b.name} WINS!`, 0, 0, { font: "900 48px system-ui", color: win.b.color, glow: "#fff" });
+        ctx.translate(W / 2, solo ? 120 : 158); ctx.scale(0.85 + pop * 0.15, 0.85 + pop * 0.15);
+        // nobody "wins" a one-player game — just report the run
+        Eng.text(ctx, solo ? "ROUND COMPLETE" : `${win.b.name} WINS!`, 0, 0,
+          { font: "900 48px system-ui", color: solo ? "#cfe0ff" : win.b.color, glow: "#fff" });
         ctx.restore();
+        if (solo && win.score != null)
+          Eng.text(ctx, `Score: ${win.score}`, W / 2, 176, { font: "800 24px system-ui", color: win.b.color });
 
         const n = ranking.length, boxW = Math.min(580, W - 120);
         const rowH = Math.min(62, (H - 300) / n), startY = 206;

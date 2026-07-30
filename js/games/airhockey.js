@@ -87,7 +87,7 @@
       }
 
       function render(ctx) {
-        ctx.fillStyle = "#07111f"; ctx.fillRect(0, 0, W, H);
+        ctx.fillStyle = Eng.skinColor("ahtable", "#0d2138"); ctx.fillRect(0, 0, W, H);
         ctx.strokeStyle = "#1d3a55"; ctx.lineWidth = 4;
         ctx.strokeRect(L, T, R - L, B - T);
         ctx.beginPath(); ctx.moveTo(L, H / 2); ctx.lineTo(R, H / 2); ctx.stroke();
@@ -110,7 +110,8 @@
         };
         mal(m1, "#ff6ad5"); mal(m2, "#4dff9e");
 
-        ctx.fillStyle = "#fff"; ctx.shadowColor = "#fff"; ctx.shadowBlur = 16;
+        const puckCol = Eng.skinColor("airhockey", "#ffffff");
+        ctx.fillStyle = puckCol; ctx.shadowColor = puckCol; ctx.shadowBlur = 16;
         ctx.beginPath(); ctx.arc(puck.x, puck.y, PR, 0, 7); ctx.fill();
         ctx.shadowBlur = 0;
 

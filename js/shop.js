@@ -21,7 +21,20 @@
   ]);
   add("airhockey", "puck", [
     { n: "White Puck", c: "#ffffff", p: 0 }, { n: "Neon Puck", c: "#4df0ff", p: 80 },
-    { n: "Pink Puck", c: "#ff5bd0", p: 120 },
+    { n: "Pink Puck", c: "#ff5bd0", p: 120 }, { n: "Gold Puck", c: "#ffd24d", p: 160 },
+  ]);
+  add("ahtable", "table", [
+    { n: "Navy Table", c: "#0d2138", p: 0 },
+    { n: "Emerald Table", c: "#0d3320", p: 110 },
+    { n: "Crimson Table", c: "#330d18", p: 130 },
+    { n: "Violet Table", c: "#1e0d33", p: 150 },
+  ]);
+  add("racecar", "racecar", [
+    { n: "Team Colour", c: null, p: 0 },
+    { n: "Racing Red", c: "#d8402f", p: 120 },
+    { n: "Speed Stripe", c: "#2b3566", p: 170, x: "stripe" },
+    { n: "Sunburst", c: "#ffb02e", p: 190, x: "stripe" },
+    { n: "Midnight GT", c: "#181c2e", p: 240 },
   ]);
   add("sumo", "ring", [
     { n: "Classic Ring", c: "#caa15a", p: 0 }, { n: "Neon Ring", c: "#4df0ff", p: 120 },
@@ -127,9 +140,10 @@
     { n: "Denim Skirt", c: "#5a7ab8", p: 150, x: "skirt" },
   ]);
 
-  add("stack", "cube", [
+  add("stack", "slab", [
     { n: "Ice Slabs", c: "#4dc4ff", p: 0 }, { n: "Amber Slabs", c: "#ffb84d", p: 90 },
-    { n: "Violet Slabs", c: "#b46bff", p: 130 },
+    { n: "Violet Slabs", c: "#b46bff", p: 130 }, { n: "Emerald Slabs", c: "#4dff9e", p: 150 },
+    { n: "Rose Slabs", c: "#ff5b8a", p: 170 }, { n: "Gold Slabs", c: "#ffd24d", p: 220 },
   ]);
   // Hair STYLE and hair COLOUR are chosen separately.
   add("hair", "stickman", [

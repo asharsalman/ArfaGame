@@ -451,18 +451,16 @@
     ctx.moveTo(r * 0.42, r * 0.42); ctx.lineTo(r * 0.82, r * 0.94);
     ctx.stroke();
 
-    // arms reaching forward
-    const ax = Math.cos(lean), ay = Math.sin(lean);
-    ctx.strokeStyle = OUT; ctx.lineWidth = r * 0.5 + 5;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 - ay * r * 0.55, ay * r * 1.15 + ax * r * 0.55);
-    ctx.moveTo(r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 + ay * r * 0.55, ay * r * 1.15 - ax * r * 0.55);
-    ctx.stroke();
-    ctx.strokeStyle = SKIN; ctx.lineWidth = r * 0.5;
-    ctx.beginPath();
-    ctx.moveTo(-r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 - ay * r * 0.55, ay * r * 1.15 + ax * r * 0.55);
-    ctx.moveTo(r * 0.7, -r * 0.1); ctx.lineTo(ax * r * 1.15 + ay * r * 0.55, ay * r * 1.15 - ax * r * 0.55);
-    ctx.stroke();
+    // arms held in a fixed braced stance — only the body moves around the ring
+    const arms = (w, col) => {
+      ctx.strokeStyle = col; ctx.lineWidth = w;
+      ctx.beginPath();
+      ctx.moveTo(-r * 0.72, -r * 0.12); ctx.lineTo(-r * 1.22, r * 0.42);
+      ctx.moveTo(r * 0.72, -r * 0.12); ctx.lineTo(r * 1.22, r * 0.42);
+      ctx.stroke();
+    };
+    arms(r * 0.5 + 5, OUT);
+    arms(r * 0.5, SKIN);
 
     // big round belly
     ctx.fillStyle = hit ? "#fff" : SKIN;

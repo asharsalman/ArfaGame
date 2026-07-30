@@ -155,6 +155,23 @@ body.onfront #menu { display: none; }
 }
 #modeCup.active { background: linear-gradient(100deg, #ffd24d, #ff9f4d); box-shadow: 0 8px 26px -8px #ffd24d; }
 
+/* pre-game controls briefing */
+.briefcard { min-width: min(460px, 92vw); }
+.briefrows { display: flex; flex-direction: column; gap: 8px; margin: 14px 0 18px; }
+.briefrow {
+  display: flex; justify-content: space-between; align-items: center; gap: 14px;
+  padding: 10px 14px; border-radius: 11px;
+  background: color-mix(in srgb, var(--c) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--c) 42%, transparent);
+}
+.briefrow .bname { font: 800 16px system-ui; color: var(--c); }
+.briefrow .bkeys { font: 700 13px system-ui; color: var(--fg); opacity: 0.9; }
+.briefrow .bkeys em {
+  font-style: normal; margin-left: 6px; padding: 2px 7px; border-radius: 5px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.hint.tiny { font-size: 12px; margin-top: 10px; opacity: 0.7; }
+
 /* tournament standings */
 .cupcard { min-width: min(430px, 90vw); }
 .cupboard { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }

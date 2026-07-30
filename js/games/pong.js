@@ -73,23 +73,32 @@
       }
       function check() { if (s1 >= TARGET || s2 >= TARGET) endMatch(); }
 
-      // a little character gripping the racket
+      // a stickman standing at the end of the table, holding a bat
       function racket(ctx, pad, side, color) {
-        const hx = pad.x + PW / 2, hy = pad.y + PH / 2;
-        const baseX = side < 0 ? 12 : W - 12;
-        // arm from a body near the wall to the racket
-        ctx.strokeStyle = color; ctx.lineWidth = 5; ctx.lineCap = "round";
-        ctx.beginPath(); ctx.moveTo(baseX, H / 2); ctx.lineTo(hx - side * 8, hy); ctx.stroke();
-        // body + head by the wall
-        ctx.beginPath(); ctx.moveTo(baseX, H / 2 - 16); ctx.lineTo(baseX, H / 2 + 16); ctx.stroke();
-        ctx.fillStyle = color; ctx.beginPath(); ctx.arc(baseX, H / 2 - 26, 9, 0, 7); ctx.fill();
-        // racket head (the hitting surface)
-        ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = 14;
-        ctx.beginPath(); ctx.ellipse(hx, hy, PW / 2 + 2, PH / 2, 0, 0, 7); ctx.fill(); ctx.shadowBlur = 0;
-        // strings
-        ctx.strokeStyle = "rgba(0,0,0,0.25)"; ctx.lineWidth = 1.5;
-        for (let i = -3; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(hx - 6, hy + i * 13); ctx.lineTo(hx + 6, hy + i * 13); ctx.stroke(); }
-        ctx.beginPath(); ctx.moveTo(hx, hy - PH / 2 + 6); ctx.lineTo(hx, hy + PH / 2 - 6); ctx.stroke();
+        const hy = pad.y + PH / 2;
+        const standX = side < 0 ? 54 : W - 54;      // where the player stands
+        const batX = pad.x + PW / 2;                // the hitting face
+
+        Art.shadow(ctx, standX, hy + 44, 17, 0.25);
+        Art.stickman(ctx, standX, hy + 42, {
+          color, scale: 1.0, t: 0, pose: "ready", face: side < 0 ? 1 : -1,
+        });
+        // arm reaching to the bat
+        const h = Art.handPos(standX, hy + 42, { scale: 1.0, face: side < 0 ? 1 : -1, pose: "ready" });
+        Art.limb(ctx, h.x, h.y, batX - side * 10, hy, 5, color);
+
+        // proper table-tennis bat: round red rubber face + wooden handle
+        ctx.save(); ctx.translate(batX, hy);
+        ctx.fillStyle = "#8a6234"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        Eng.roundRect(ctx, -side * 4 - 5, PH / 2 - 6, 10, 26, 4);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "#d8402f"; ctx.strokeStyle = Art.OUT; ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.ellipse(0, 0, PW / 2 + 3, PH / 2 - 4, 0, 0, 7);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = "rgba(255,255,255,0.2)";
+        ctx.beginPath(); ctx.ellipse(-2, -PH / 6, PW / 4, PH / 6, 0, 0, 7); ctx.fill();
+        ctx.restore();
       }
 
       function render(ctx) {
