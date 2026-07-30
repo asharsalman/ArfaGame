@@ -142,6 +142,7 @@
         Eng.SESSION.wins[rank[0].b.id] = (Eng.SESSION.wins[rank[0].b.id] || 0) + 1;
         Eng.saveSession();
         coinReward = 30; Eng.addCoins(coinReward);
+        if (rank.length > 1) Eng.track("win");     // solo runs aren't wins
         // in a tournament the hub takes over: bank the points and show standings
         if (window.GameHub && GameHub.cupActive && GameHub.cupActive()) {
           setTimeout(() => GameHub.cupRecord(rank), 1400);
@@ -212,6 +213,68 @@
     const eq = Eng.SHOP.equipped[game];
     const it = eq ? items.find((i) => i.id === eq) : items.find((i) => i.game === game && i.default);
     return it ? it.color : fallback;
+  };
+
+  // ---- daily challenges: 3 tasks a day, rerolled at midnight ----
+  const TASK_POOL = [
+    { id: "play3", desc: "Play 3 different games", goal: 3, reward: 60, ev: "play" },
+    { id: "win2", desc: "Win 2 matches", goal: 2, reward: 80, ev: "win" },
+    { id: "win4", desc: "Win 4 matches", goal: 4, reward: 140, ev: "win" },
+    { id: "coins30", desc: "Collect 30 coins", goal: 30, reward: 70, ev: "coin" },
+    { id: "coins60", desc: "Collect 60 coins", goal: 60, reward: 130, ev: "coin" },
+    { id: "play5", desc: "Play 5 different games", goal: 5, reward: 110, ev: "play" },
+    { id: "cup1", desc: "Finish a tournament", goal: 1, reward: 150, ev: "cup" },
+    { id: "gd50", desc: "Reach 50% in Geometry Dash", goal: 1, reward: 90, ev: "gd50" },
+    { id: "hoop3", desc: "Sink a 3-point basket", goal: 1, reward: 90, ev: "hoop3" },
+    { id: "stack8", desc: "Stack a tower 8 high", goal: 1, reward: 100, ev: "stack8" },
+  ];
+  const todayKey = () => new Date().toISOString().slice(0, 10);
+
+  function rollDaily() {
+    // deterministic per-day pick so it's the same all day
+    const seedStr = todayKey();
+    let s = 0;
+    for (let i = 0; i < seedStr.length; i++) s = (s * 31 + seedStr.charCodeAt(i)) >>> 0;
+    const pool = TASK_POOL.slice(), picks = [];
+    for (let i = 0; i < 3 && pool.length; i++) {
+      s = (s * 1103515245 + 12345) >>> 0;
+      picks.push(pool.splice(s % pool.length, 1)[0]);
+    }
+    return {
+      date: seedStr,
+      seen: [],
+      tasks: picks.map((t) => ({ id: t.id, desc: t.desc, goal: t.goal, reward: t.reward, ev: t.ev, prog: 0, claimed: false })),
+    };
+  }
+
+  Eng.DAILY = (function () {
+    let d = null;
+    try { const v = localStorage.getItem("games_daily"); if (v) d = JSON.parse(v); } catch (e) {}
+    if (!d || d.date !== todayKey()) d = rollDaily();
+    return d;
+  })();
+  Eng.dailySave = () => { try { localStorage.setItem("games_daily", JSON.stringify(Eng.DAILY)); } catch (e) {} };
+
+  /* Games and the hub call this; matching tasks tick up. */
+  Eng.track = function (ev, arg) {
+    if (Eng.DAILY.date !== todayKey()) { Eng.DAILY = rollDaily(); }
+    let changed = false;
+    for (const t of Eng.DAILY.tasks) {
+      if (t.ev !== ev || t.prog >= t.goal) continue;
+      if (ev === "play") {                        // distinct games only
+        if (Eng.DAILY.seen.indexOf(arg) >= 0) continue;
+        Eng.DAILY.seen.push(arg);
+        t.prog = Eng.DAILY.seen.length;
+      } else if (ev === "coin") t.prog += (arg || 1);
+      else t.prog += 1;
+      t.prog = Math.min(t.prog, t.goal);
+      changed = true;
+    }
+    if (changed) { Eng.dailySave(); if (window.GameHub && GameHub.refreshDaily) GameHub.refreshDaily(); }
+  };
+  Eng.claimTask = function (t) {
+    if (t.prog < t.goal || t.claimed) return false;
+    t.claimed = true; Eng.addCoins(t.reward); Eng.dailySave(); return true;
   };
 
   window.Eng = Eng;

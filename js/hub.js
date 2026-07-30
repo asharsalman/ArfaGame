@@ -268,6 +268,7 @@
       cup.points[r.b.id] = (cup.points[r.b.id] || 0) + ([3, 2, 1, 0][i] || 0);
     });
     cup.round++;
+    if (cup.round >= cup.games.length) Eng.track("cup");
     exitToMenu();
     showCupBoard(false);
   }
@@ -652,6 +653,7 @@
     currentDef = def; currentCount = count; currentBot = bot;
     env.players = count; env.bot = bot;
     current = def.create(env);
+    Eng.track("play", def.id);
     state = "play";
     document.body.classList.add("playing");
     let label = def.name;

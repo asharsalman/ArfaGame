@@ -203,7 +203,7 @@
           if (p.collected.has(i)) return;
           if (circleRect(c.wx, p.floorY - c.hAbove, 16, p.wx, p.y, SIZE, SIZE)) {
             p.collected.add(i); p.coins++;
-            Eng.addCoins(1); lifetimeCoins = Eng.coins();
+            Eng.addCoins(1); Eng.track("coin", 1); lifetimeCoins = Eng.coins();
           }
         });
 

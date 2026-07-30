@@ -23,6 +23,8 @@
         { name: "Ice Ring", grip: 0.985, drag: 1.0, road: "#9fc4dd", grass: "#d8ecf6", trim: "#4dc4ff" },
         { name: "Desert Dash", grip: 0.9, drag: 0.82, road: "#c9a165", grass: "#8a6a3a", trim: "#ffd24d" },
         { name: "Night Neon", grip: 0.94, drag: 1.05, road: "#22243a", grass: "#12142a", trim: "#b46bff" },
+        { name: "Forest Loop", grip: 0.9, drag: 0.95, road: "#4a4a52", grass: "#1f5c22", trim: "#7dff4d" },
+        { name: "Grass Prix", grip: 0.88, drag: 0.9, road: "#6b8a3a", grass: "#2f6b2c", trim: "#e8f79a" },
       ];
       let map = MAPS[0];
       // oval centre-line; the track is a band around it
