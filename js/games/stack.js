@@ -68,6 +68,7 @@
         const perfect = Math.abs(c.x - top.x) < 3;
         const nx = (left + right) / 2;
         p.slabs.push({ x: nx, w: perfect ? top.w : w, perfect });
+        if (p.slabs.length - 1 === 8) Eng.track("stack8");
         p.flash = perfect ? 0.5 : 0;
         p.speed = Math.min(430, p.speed + 11);
         p.cur = { x: -laneW * 0.34, w: perfect ? top.w : w, dir: 1 };

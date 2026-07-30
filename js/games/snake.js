@@ -19,6 +19,7 @@
       const OX = (W - COLS * CELL) / 2, OY = (H - ROWS * CELL) / 2;
       const STEP = 0.11, TARGET = 5, START_LEN = 4;
       const foodCol = Eng.skinColor("snake", "#ff5b8a");
+      const SKIN = (Eng.equippedItem("snakeskin") || {}).extra || "";
       // pinwheel spawns — everyone runs away from the next player, so nobody is
       // on an instant head-on course at the start of a round
       const starts = [
@@ -146,8 +147,26 @@
             const x = OX + s.x * CELL, y = OY + s.y * CELL;
             ctx.fillStyle = p.b.color;
             ctx.globalAlpha = k === 0 ? 1 : Math.max(0.35, 1 - k / (p.body.length + 4));
+            if (SKIN === "glow" && k === 0) { ctx.shadowColor = p.b.color; ctx.shadowBlur = 18; }
             Eng.roundRect(ctx, x + 2, y + 2, CELL - 4, CELL - 4, k === 0 ? 7 : 5);
             ctx.fill();
+            ctx.shadowBlur = 0;
+            if (k === 0) return;
+            // skin pattern on the body segments
+            if (SKIN === "stripe" && k % 2 === 0) {
+              ctx.fillStyle = "rgba(0,0,0,0.35)";
+              ctx.fillRect(x + 4, y + CELL / 2 - 2, CELL - 8, 4);
+            } else if (SKIN === "scale") {
+              ctx.strokeStyle = "rgba(0,0,0,0.35)"; ctx.lineWidth = 1.6;
+              ctx.beginPath(); ctx.arc(x + CELL / 2, y + CELL * 0.32, CELL * 0.3, 0.15 * Math.PI, 0.85 * Math.PI);
+              ctx.stroke();
+            } else if (SKIN === "spot") {
+              ctx.fillStyle = "rgba(0,0,0,0.32)";
+              ctx.beginPath(); ctx.arc(x + CELL / 2, y + CELL / 2, CELL * 0.17, 0, 7); ctx.fill();
+            } else if (SKIN === "glow") {
+              ctx.fillStyle = "rgba(255,255,255,0.25)";
+              ctx.fillRect(x + CELL * 0.36, y + CELL * 0.36, CELL * 0.28, CELL * 0.28);
+            }
           });
           ctx.globalAlpha = 1;
           // eyes on the head

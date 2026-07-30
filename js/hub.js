@@ -147,8 +147,35 @@
     document.getElementById("shop").hidden = true;
     document.body.classList.add("onfront");
     refreshCoins();
+    buildDaily();
     if (window.FrontPage) FrontPage.start();
   }
+  function buildDaily() {
+    const list = document.getElementById("dailyList");
+    if (!list) return;
+    list.innerHTML = "";
+    Eng.DAILY.tasks.forEach((t) => {
+      const done = t.prog >= t.goal;
+      const row = document.createElement("div");
+      row.className = "dailyrow" + (t.claimed ? " claimed" : done ? " ready" : "");
+      row.innerHTML = `
+        <span class="dtext">${t.desc}</span>
+        <span class="dbar"><i style="width:${Math.round((t.prog / t.goal) * 100)}%"></i></span>
+        <span class="dprog">${Math.min(t.prog, t.goal)}/${t.goal}</span>`;
+      const btn = document.createElement("button");
+      btn.className = "dclaim";
+      btn.textContent = t.claimed ? "✓ Claimed" : done ? `Claim ${COIN_SM}${t.reward}`.replace(/<[^>]+>/g, "") : `+${t.reward}`;
+      if (t.claimed) btn.innerHTML = "✓ Claimed";
+      else if (done) btn.innerHTML = `Claim ${COIN_SM}${t.reward}`;
+      else btn.innerHTML = `${COIN_SM}${t.reward}`;
+      btn.disabled = !done || t.claimed;
+      btn.onclick = () => { if (Eng.claimTask(t)) { buildDaily(); refreshCoins(); } };
+      row.appendChild(btn);
+      list.appendChild(row);
+    });
+  }
+  GameHub.refreshDaily = buildDaily;
+
   function leaveFront() {
     document.body.classList.remove("onfront");
     if (window.FrontPage) FrontPage.stop();

@@ -297,6 +297,51 @@
     ctx.restore();
   };
 
+  /* Face drawn on the Geometry Dash cube (local coords, cube centred on 0,0). */
+  A.cubeFace = function (ctx, S, style) {
+    const ink = "#16244a";
+    const eo = S / 6, er = S / 13;
+    ctx.fillStyle = ink; ctx.strokeStyle = ink;
+    ctx.lineWidth = S / 18; ctx.lineCap = "round";
+    switch (style) {
+      case "shades":
+        ctx.fillRect(-S / 2.6, -S / 9, S / 1.3, S / 7);
+        ctx.beginPath();
+        ctx.ellipse(-eo, -2, er * 1.9, er * 1.5, 0, 0, 7);
+        ctx.ellipse(eo, -2, er * 1.9, er * 1.5, 0, 0, 7);
+        ctx.fill();
+        ctx.beginPath(); ctx.arc(0, S / 6, S / 7, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+        break;
+      case "wink":
+        ctx.beginPath(); ctx.arc(-eo, -3, er, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(eo - er, -3); ctx.lineTo(eo + er, -3); ctx.stroke();
+        ctx.beginPath(); ctx.arc(0, 2, S / 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+        break;
+      case "grr":
+        ctx.beginPath();
+        ctx.moveTo(-eo - er, -8); ctx.lineTo(-eo + er, -3);
+        ctx.moveTo(eo + er, -8); ctx.lineTo(eo - er, -3); ctx.stroke();
+        ctx.beginPath(); ctx.arc(-eo, -1, er * 0.8, 0, 7); ctx.arc(eo, -1, er * 0.8, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(-S / 7, S / 5); ctx.lineTo(S / 7, S / 5); ctx.stroke();
+        break;
+      case "shock":
+        ctx.beginPath(); ctx.arc(-eo, -3, er * 1.25, 0, 7); ctx.arc(eo, -3, er * 1.25, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(0, S / 5, S / 9, S / 7, 0, 0, 7); ctx.fill();
+        break;
+      case "tongue":
+        ctx.beginPath(); ctx.arc(-eo, -3, er, 0, 7); ctx.arc(eo, -3, er, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 2, S / 6, 0.1 * Math.PI, 0.9 * Math.PI); ctx.stroke();
+        ctx.fillStyle = "#ff6a8a"; ctx.strokeStyle = ink; ctx.lineWidth = S / 26;
+        ctx.beginPath();
+        ctx.ellipse(S / 22, S / 4.2, S / 9, S / 8, 0, 0, 7);
+        ctx.fill(); ctx.stroke();
+        break;
+      default:                                   // smile
+        ctx.beginPath(); ctx.arc(-eo, -3, er, 0, 7); ctx.arc(eo, -3, er, 0, 7); ctx.fill();
+        ctx.beginPath(); ctx.arc(0, 2, S / 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+    }
+  };
+
   // ---- cartoon balls ----
   A.ball = function (ctx, x, y, r, kind, color) {
     ctx.save();

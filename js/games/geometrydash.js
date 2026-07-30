@@ -36,6 +36,7 @@
       let L = LEVELS[levelIdx];
       let LEVEL_END = L.len;
 
+      const FACE = (Eng.equippedItem("gdface") || {}).extra || "smile";
       let lifetimeCoins = Eng.coins();
       let bestPct = store.get("gd_best", 0);
 
@@ -225,6 +226,7 @@
           }
         } else {
           const pct = Math.floor((p.wx / LEVEL_END) * 100);
+          if (pct >= 50 && !p.hit50) { p.hit50 = true; Eng.track("gd50"); }
           if (mode === 1 && pct > bestPct) { bestPct = pct; store.set("gd_best", bestPct); }
         }
       }
@@ -341,11 +343,8 @@
           const grd = ctx.createLinearGradient(-SIZE / 2, -SIZE / 2, SIZE / 2, SIZE / 2);
           grd.addColorStop(0, "#fff"); grd.addColorStop(1, cubeCol);
           ctx.fillStyle = grd; roundRect(ctx, -SIZE / 2, -SIZE / 2, SIZE, SIZE, 7); ctx.fill();
-          ctx.shadowBlur = 0; ctx.fillStyle = "#16244a";
-          const eo = SIZE / 6;
-          ctx.beginPath(); ctx.arc(-eo, -3, SIZE / 13, 0, 7); ctx.arc(eo, -3, SIZE / 13, 0, 7); ctx.fill();
-          ctx.lineWidth = SIZE / 18; ctx.strokeStyle = "#16244a"; ctx.lineCap = "round";
-          ctx.beginPath(); ctx.arc(0, 2, SIZE / 6, 0.15 * Math.PI, 0.85 * Math.PI); ctx.stroke();
+          ctx.shadowBlur = 0;
+          Art.cubeFace(ctx, SIZE, FACE);
           ctx.restore();
         }
 

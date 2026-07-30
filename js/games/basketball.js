@@ -123,6 +123,7 @@
             for (const h of HOOPS) {
               if (py <= h.y && s.y > h.y && Math.abs(s.x - h.x) < h.rim) {
                 s.scored = true; s.owner.score += h.value;
+                if (h.value === 3) Eng.track("hoop3");
                 pops.push({ x: h.x, y: h.y, v: h.value, life: 0.9, c: s.owner.b.color });
                 break;
               }

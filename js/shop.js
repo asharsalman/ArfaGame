@@ -15,6 +15,14 @@
     { n: "Toxic Cube", c: "#7dff4d", p: 150 }, { n: "Void Cube", c: "#b46bff", p: 220 },
     { n: "Gold Cube", c: "#ffd24d", p: 300 },
   ]);
+  add("gdface", "cubeface", [
+    { n: "Smile", c: "#4df0ff", p: 0, x: "smile" },
+    { n: "Tongue Out", c: "#4df0ff", p: 80, x: "tongue" },
+    { n: "Determined", c: "#4df0ff", p: 100, x: "grr" },
+    { n: "Wink", c: "#4df0ff", p: 110, x: "wink" },
+    { n: "Shades", c: "#4df0ff", p: 160, x: "shades" },
+    { n: "Shocked", c: "#4df0ff", p: 130, x: "shock" },
+  ]);
   add("pong", "ball", [
     { n: "White Ball", c: "#ffffff", p: 0 }, { n: "Fireball", c: "#ff7a3a", p: 80 },
     { n: "Plasma Ball", c: "#7dff4d", p: 120 }, { n: "Gold Ball", c: "#ffd24d", p: 160 },
@@ -94,6 +102,13 @@
   add("snake", "pellet", [
     { n: "Pink Pellet", c: "#ff5b8a", p: 0 }, { n: "Gold Pellet", c: "#ffd24d", p: 80 },
     { n: "Ice Pellet", c: "#6cf0ff", p: 120 },
+  ]);
+  add("snakeskin", "snakeskin", [
+    { n: "Solid", c: null, p: 0, x: "" },
+    { n: "Striped", c: null, p: 110, x: "stripe" },
+    { n: "Scaled", c: null, p: 150, x: "scale" },
+    { n: "Spotted", c: null, p: 180, x: "spot" },
+    { n: "Glowing", c: null, p: 240, x: "glow" },
   ]);
   add("spinners", "ring", [
     { n: "Violet Arena", c: "#b46bff", p: 0 }, { n: "Ember Arena", c: "#ff5b3a", p: 110 },
